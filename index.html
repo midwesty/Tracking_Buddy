@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#FF7849">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Tracking Buddy">
+  <meta name="description" content="A friendly habit & quit tracker. Tally the turtle is your buddy.">
+
+  <title>Tracking Buddy 🐢</title>
+
+  <!-- Fonts: Fredoka (display, rounded & friendly) + Nunito (body, warm & legible) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/mobile.css">
+
+  <!-- Inline emoji favicon so the app has an icon even without art files -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🐢%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+  <div id="app">
+
+    <!-- ===== Header ===== -->
+    <header class="app-header" role="banner">
+      <div class="app-title">
+        <div class="app-title-mascot" id="header-mascot">
+          <!-- Mascot image with emoji fallback. JS will replace, but keep emoji here as a safety net. -->
+          <img src="assets/mascot/mascot-icon.png" alt="Tally" onerror="this.outerHTML='<span style=&quot;font-size:24px;&quot;>🐢</span>'">
+        </div>
+        <span>Tracking Buddy</span>
+      </div>
+
+      <div class="header-actions">
+        <button class="dashboard-switcher" id="dashboard-switcher" aria-label="Switch dashboard" type="button">
+          <span class="dashboard-switcher-name" id="dashboard-switcher-name">My Dashboard</span>
+          <span class="dashboard-switcher-chevron">▼</span>
+        </button>
+        <button class="btn-icon" id="settings-btn" aria-label="Settings" type="button">⚙</button>
+      </div>
+    </header>
+
+    <!-- ===== Dashboard ===== -->
+    <main id="dashboard" class="dashboard" role="main">
+      <!-- Tiles or empty state rendered here by JS -->
+      <div style="padding: 40px 20px; text-align:center; color: var(--text-muted);">
+        Loading…
+      </div>
+    </main>
+
+    <!-- ===== Floating Action Button ===== -->
+    <button class="fab-add" id="fab-add" aria-label="Add new tile" type="button">+</button>
+
+  </div>
+
+  <!-- ===== Scripts (load order matters) ===== -->
+  <script src="js/storage.js"></script>
+  <script src="js/metrics.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/dragdrop.js"></script>
+  <script src="js/tiles.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/modals.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>

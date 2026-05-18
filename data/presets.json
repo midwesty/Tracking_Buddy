@@ -1,0 +1,180 @@
+{
+  "_note": "Starter tile presets. Users can pick one and customize. Each preset declares its type, default metrics, and any cost/time/baseline defaults to suggest.",
+  "presets": [
+    {
+      "id": "preset-cigarettes",
+      "name": "Quit smoking",
+      "type": "quit",
+      "iconId": "cigarette",
+      "unitName": "cigarette",
+      "unitNamePlural": "cigarettes",
+      "color": "#FF7849",
+      "suggestedInputs": {
+        "costPerUnit": 0.6,
+        "costPerBundle": 12,
+        "bundleSize": 20,
+        "bundleName": "pack",
+        "timePerUnitMinutes": 6,
+        "baselinePerDay": 15
+      },
+      "defaultMetrics": ["time-since", "money-saved", "current-streak", "units-avoided"]
+    },
+    {
+      "id": "preset-vape",
+      "name": "Quit vaping",
+      "type": "quit",
+      "iconId": "vape",
+      "unitName": "puff",
+      "unitNamePlural": "puffs",
+      "color": "#9D7FE0",
+      "suggestedInputs": {
+        "costPerUnit": 0.05,
+        "costPerBundle": 15,
+        "bundleSize": 300,
+        "bundleName": "pod",
+        "timePerUnitMinutes": 1,
+        "baselinePerDay": 100
+      },
+      "defaultMetrics": ["time-since", "money-saved", "current-streak"]
+    },
+    {
+      "id": "preset-alcohol",
+      "name": "Sober days",
+      "type": "quit",
+      "iconId": "alcohol",
+      "unitName": "drink",
+      "unitNamePlural": "drinks",
+      "color": "#5BA8B5",
+      "suggestedInputs": {
+        "costPerUnit": 8,
+        "baselinePerDay": 3
+      },
+      "defaultMetrics": ["time-since", "current-streak", "longest-streak", "money-saved"]
+    },
+    {
+      "id": "preset-water",
+      "name": "Drink water",
+      "type": "build",
+      "iconId": "water",
+      "unitName": "glass",
+      "unitNamePlural": "glasses",
+      "color": "#00A7C4",
+      "suggestedInputs": {
+        "dailyGoal": 8
+      },
+      "defaultMetrics": ["count-today", "goal-progress", "current-streak"]
+    },
+    {
+      "id": "preset-coffee",
+      "name": "Coffee tracker",
+      "type": "neutral",
+      "iconId": "coffee",
+      "unitName": "cup",
+      "unitNamePlural": "cups",
+      "color": "#7A5A38",
+      "suggestedInputs": {
+        "costPerUnit": 4.5
+      },
+      "defaultMetrics": ["count-today", "count-week", "money-spent"]
+    },
+    {
+      "id": "preset-gratitude",
+      "name": "Gratitude journal",
+      "type": "build",
+      "iconId": "gratitude",
+      "unitName": "entry",
+      "unitNamePlural": "entries",
+      "color": "#FFB627",
+      "suggestedInputs": {
+        "dailyGoal": 1
+      },
+      "defaultMetrics": ["count-today", "current-streak", "longest-streak"]
+    },
+    {
+      "id": "preset-workout",
+      "name": "Workouts",
+      "type": "build",
+      "iconId": "weight",
+      "unitName": "workout",
+      "unitNamePlural": "workouts",
+      "color": "#4CB944",
+      "suggestedInputs": {
+        "dailyGoal": 1
+      },
+      "defaultMetrics": ["count-today", "count-week", "current-streak"]
+    },
+    {
+      "id": "preset-meditation",
+      "name": "Meditation",
+      "type": "build",
+      "iconId": "meditation",
+      "unitName": "session",
+      "unitNamePlural": "sessions",
+      "color": "#9D7FE0",
+      "suggestedInputs": {
+        "dailyGoal": 1,
+        "timePerUnitMinutes": 10
+      },
+      "defaultMetrics": ["count-today", "current-streak", "longest-streak"]
+    },
+    {
+      "id": "preset-reading",
+      "name": "Reading time",
+      "type": "build",
+      "iconId": "book",
+      "unitName": "page",
+      "unitNamePlural": "pages",
+      "color": "#5BA856",
+      "suggestedInputs": {
+        "dailyGoal": 20
+      },
+      "defaultMetrics": ["count-today", "count-week", "total-count"]
+    },
+    {
+      "id": "preset-bees",
+      "name": "Bumblebees spotted",
+      "type": "observe",
+      "iconId": "bee",
+      "unitName": "sighting",
+      "unitNamePlural": "sightings",
+      "color": "#FFB627",
+      "suggestedInputs": {},
+      "defaultMetrics": ["total-count", "count-week", "time-since"]
+    },
+    {
+      "id": "preset-savings",
+      "name": "Savings goal",
+      "type": "build",
+      "iconId": "money",
+      "unitName": "deposit",
+      "unitNamePlural": "deposits",
+      "color": "#4CB944",
+      "suggestedInputs": {
+        "costPerUnit": 10
+      },
+      "defaultMetrics": ["total-count", "money-spent", "current-streak"]
+    },
+    {
+      "id": "preset-arguments",
+      "name": "Days since last argument",
+      "type": "quit",
+      "iconId": "heart",
+      "unitName": "argument",
+      "unitNamePlural": "arguments",
+      "color": "#FF8FA3",
+      "suggestedInputs": {},
+      "defaultMetrics": ["time-since", "current-streak", "longest-streak"]
+    },
+    {
+      "id": "preset-custom",
+      "name": "Start from scratch",
+      "type": "neutral",
+      "iconId": "star",
+      "unitName": "thing",
+      "unitNamePlural": "things",
+      "color": "#FFB627",
+      "suggestedInputs": {},
+      "defaultMetrics": ["total-count", "time-since"]
+    }
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "_note": "Each icon has a filename (in /assets/icons/), an emoji fallback used if image fails to load, and tags. Tags drive the search. Add more icons by extending this list — no code changes needed.",
+  "icons": [
+    {
+      "id": "cigarette",
+      "filename": "icon-cigarette.png",
+      "emoji": "🚬",
+      "label": "Cigarette",
+      "tags": ["cigarette", "smoke", "smoking", "tobacco", "nicotine", "quit", "habit", "addiction"]
+    },
+    {
+      "id": "vape",
+      "filename": "icon-vape.png",
+      "emoji": "💨",
+      "label": "Vape",
+      "tags": ["vape", "vaping", "e-cigarette", "smoke", "nicotine", "quit", "habit"]
+    },
+    {
+      "id": "alcohol",
+      "filename": "icon-alcohol.png",
+      "emoji": "🍺",
+      "label": "Drink",
+      "tags": ["alcohol", "drink", "beer", "wine", "liquor", "sober", "quit", "drinking"]
+    },
+    {
+      "id": "coffee",
+      "filename": "icon-coffee.png",
+      "emoji": "☕",
+      "label": "Coffee",
+      "tags": ["coffee", "caffeine", "espresso", "drink", "morning", "tea"]
+    },
+    {
+      "id": "water",
+      "filename": "icon-water.png",
+      "emoji": "💧",
+      "label": "Water",
+      "tags": ["water", "drink", "hydration", "glass", "bottle", "thirsty", "health"]
+    },
+    {
+      "id": "pill",
+      "filename": "icon-pill.png",
+      "emoji": "💊",
+      "label": "Medication",
+      "tags": ["pill", "medication", "medicine", "drug", "vitamin", "supplement", "health", "prescription"]
+    },
+    {
+      "id": "running",
+      "filename": "icon-running.png",
+      "emoji": "🏃",
+      "label": "Running",
+      "tags": ["run", "running", "exercise", "jog", "workout", "fitness", "cardio", "sport"]
+    },
+    {
+      "id": "steps",
+      "filename": "icon-steps.png",
+      "emoji": "👟",
+      "label": "Steps",
+      "tags": ["steps", "walk", "walking", "exercise", "shoes", "feet", "fitness"]
+    },
+    {
+      "id": "weight",
+      "filename": "icon-weight.png",
+      "emoji": "🏋️",
+      "label": "Workout",
+      "tags": ["weight", "gym", "workout", "lift", "strength", "exercise", "fitness", "muscle"]
+    },
+    {
+      "id": "meditation",
+      "filename": "icon-meditation.png",
+      "emoji": "🧘",
+      "label": "Meditation",
+      "tags": ["meditation", "mindfulness", "yoga", "calm", "zen", "breathe", "mental"]
+    },
+    {
+      "id": "sleep",
+      "filename": "icon-sleep.png",
+      "emoji": "😴",
+      "label": "Sleep",
+      "tags": ["sleep", "rest", "bed", "night", "tired", "nap", "dream"]
+    },
+    {
+      "id": "money",
+      "filename": "icon-money.png",
+      "emoji": "💰",
+      "label": "Savings",
+      "tags": ["money", "savings", "save", "cash", "dollar", "finance", "budget", "wealth"]
+    },
+    {
+      "id": "book",
+      "filename": "icon-book.png",
+      "emoji": "📚",
+      "label": "Reading",
+      "tags": ["book", "read", "reading", "study", "learn", "library", "page"]
+    },
+    {
+      "id": "gratitude",
+      "filename": "icon-gratitude.png",
+      "emoji": "🙏",
+      "label": "Gratitude",
+      "tags": ["gratitude", "thanks", "thankful", "journal", "mindful", "appreciation"]
+    },
+    {
+      "id": "heart",
+      "filename": "icon-heart.png",
+      "emoji": "❤️",
+      "label": "Heart",
+      "tags": ["heart", "love", "health", "relationship", "feelings", "emotion"]
+    },
+    {
+      "id": "bee",
+      "filename": "icon-bee.png",
+      "emoji": "🐝",
+      "label": "Bee",
+      "tags": ["bee", "bumblebee", "honeybee", "insect", "garden", "nature", "bug"]
+    },
+    {
+      "id": "bird",
+      "filename": "icon-bird.png",
+      "emoji": "🐦",
+      "label": "Bird",
+      "tags": ["bird", "birdwatching", "nature", "wildlife", "wing", "sky", "animal"]
+    },
+    {
+      "id": "plant",
+      "filename": "icon-plant.png",
+      "emoji": "🌱",
+      "label": "Plant",
+      "tags": ["plant", "garden", "gardening", "grow", "sprout", "seed", "green", "nature"]
+    },
+    {
+      "id": "flower",
+      "filename": "icon-flower.png",
+      "emoji": "🌸",
+      "label": "Flower",
+      "tags": ["flower", "bloom", "garden", "nature", "petal", "spring"]
+    },
+    {
+      "id": "sun",
+      "filename": "icon-sun.png",
+      "emoji": "☀️",
+      "label": "Sun",
+      "tags": ["sun", "sunny", "weather", "day", "outside", "outdoor", "bright"]
+    },
+    {
+      "id": "art",
+      "filename": "icon-art.png",
+      "emoji": "🎨",
+      "label": "Art",
+      "tags": ["art", "paint", "draw", "creative", "hobby", "craft"]
+    },
+    {
+      "id": "music",
+      "filename": "icon-music.png",
+      "emoji": "🎵",
+      "label": "Music",
+      "tags": ["music", "song", "play", "instrument", "practice", "listen"]
+    },
+    {
+      "id": "code",
+      "filename": "icon-code.png",
+      "emoji": "💻",
+      "label": "Code",
+      "tags": ["code", "coding", "programming", "computer", "dev", "work", "tech"]
+    },
+    {
+      "id": "star",
+      "filename": "icon-star.png",
+      "emoji": "⭐",
+      "label": "Star",
+      "tags": ["star", "favorite", "achievement", "goal", "special", "milestone"]
+    },
+    {
+      "id": "checkmark",
+      "filename": "icon-checkmark.png",
+      "emoji": "✅",
+      "label": "Done",
+      "tags": ["check", "checkmark", "done", "complete", "task", "todo", "habit"]
+    }
+  ]
+}

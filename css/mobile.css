@@ -1,0 +1,56 @@
+/* ===================================================================
+   Tracking Buddy — mobile.css
+   Mobile-specific tweaks, safe-area handling, touch optimizations
+   =================================================================== */
+
+/* Safe area handling for iOS notch / home indicator */
+.app-header {
+  padding-top: max(16px, env(safe-area-inset-top));
+}
+
+.dashboard {
+  padding-bottom: max(120px, calc(env(safe-area-inset-bottom) + 100px));
+}
+
+.fab-add {
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px));
+  right: max(20px, env(safe-area-inset-right));
+}
+
+.modal {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Touch-friendly tap targets */
+@media (hover: none) and (pointer: coarse) {
+  /* Bigger tap targets on touch devices */
+  .btn { min-height: 48px; }
+  .icon-option { min-height: 48px; }
+
+  /* Disable hover transforms which feel weird on touch */
+  .tile:hover { transform: none; }
+  .tile:active { transform: scale(0.96); }
+
+  /* Make modal scrolling feel native */
+  .modal-body { -webkit-overflow-scrolling: touch; }
+}
+
+/* Smaller screens — tighter padding */
+@media (max-width: 380px) {
+  .dashboard { padding-left: 12px; padding-right: 12px; }
+  .app-header { padding-left: 14px; padding-right: 14px; }
+  .tile { padding: 12px; }
+  .tile-icon { width: 38px; height: 38px; font-size: 22px; }
+  .tile-metric-value { font-size: 1.1rem; }
+  .modal-body { padding: 16px; }
+}
+
+/* Disable text selection on UI chrome */
+.app-header, .tile-header, .tile-quick-log, .fab-add, .btn, .pill, .modal-header {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Prevent pinch-zoom interfering with tile drags */
+.dashboard.edit-mode { touch-action: none; }
+.dashboard.edit-mode .tile { touch-action: none; }

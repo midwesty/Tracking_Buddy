@@ -1,0 +1,55 @@
+/* ===================================================================
+   Tracking Buddy — themes.css
+   Default theme variables (Sunshine). Other themes injected by JS.
+   =================================================================== */
+
+:root {
+  /* Sunshine theme defaults */
+  --bg-primary: #FFF8EC;
+  --bg-secondary: #FFEDD0;
+  --bg-elevated: #FFFFFF;
+  --bg-overlay: rgba(64, 38, 12, 0.55);
+  --surface: #FFFFFF;
+  --surface-alt: #FFF3DC;
+  --text-primary: #3D2914;
+  --text-secondary: #7A5A38;
+  --text-muted: #B59572;
+  --text-inverse: #FFFFFF;
+  --accent: #FF7849;
+  --accent-hover: #FF5722;
+  --accent-soft: #FFD3BD;
+  --secondary: #FFB627;
+  --secondary-soft: #FFE5A8;
+  --success: #4CB944;
+  --success-soft: #C8EBC4;
+  --warning: #FFB627;
+  --danger: #E74C3C;
+  --danger-soft: #FAD0CC;
+  --info: #3498DB;
+  --border: #F0D9B0;
+  --border-strong: #D9B273;
+  --shadow: 0 4px 20px rgba(255, 120, 73, 0.15);
+  --shadow-hover: 0 8px 28px rgba(255, 120, 73, 0.25);
+  --shadow-soft: 0 2px 8px rgba(64, 38, 12, 0.08);
+  --grid-line: rgba(217, 178, 115, 0.2);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* Tile system */
+  --tile-min-size: 140px;
+  --grid-gap: 12px;
+}

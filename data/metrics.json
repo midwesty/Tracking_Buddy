@@ -1,0 +1,155 @@
+{
+  "_note": "Each metric declares what inputs it needs and how to format. The actual computation lives in js/metrics.js — this file is metadata that drives the UI.",
+  "metrics": [
+    {
+      "id": "time-since",
+      "label": "Time since last",
+      "description": "Live ticker showing how long since the last log",
+      "needsInputs": [],
+      "appliesTo": ["quit", "build", "observe", "neutral"],
+      "format": "duration",
+      "live": true,
+      "defaultOnFace": true
+    },
+    {
+      "id": "current-streak",
+      "label": "Current streak",
+      "description": "Days in your current streak",
+      "needsInputs": [],
+      "appliesTo": ["quit", "build"],
+      "format": "days",
+      "live": true,
+      "defaultOnFace": true
+    },
+    {
+      "id": "longest-streak",
+      "label": "Longest streak",
+      "description": "Your personal best streak",
+      "needsInputs": [],
+      "appliesTo": ["quit", "build"],
+      "format": "days",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "money-saved",
+      "label": "Money saved",
+      "description": "Money saved by avoiding this — accumulates live",
+      "needsInputs": ["costPerUnit", "baselinePerDay"],
+      "appliesTo": ["quit"],
+      "format": "currency",
+      "live": true,
+      "defaultOnFace": true
+    },
+    {
+      "id": "money-spent",
+      "label": "Money spent",
+      "description": "Total spent on this",
+      "needsInputs": ["costPerUnit"],
+      "appliesTo": ["build", "neutral"],
+      "format": "currency",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "units-avoided",
+      "label": "Units avoided",
+      "description": "How many units you haven't consumed",
+      "needsInputs": ["baselinePerDay"],
+      "appliesTo": ["quit"],
+      "format": "count",
+      "live": true,
+      "defaultOnFace": false
+    },
+    {
+      "id": "time-avoided",
+      "label": "Time reclaimed",
+      "description": "Total time not spent on this habit",
+      "needsInputs": ["timePerUnit", "baselinePerDay"],
+      "appliesTo": ["quit"],
+      "format": "duration",
+      "live": true,
+      "defaultOnFace": false
+    },
+    {
+      "id": "total-count",
+      "label": "Total logged",
+      "description": "Total times logged (all time)",
+      "needsInputs": [],
+      "appliesTo": ["build", "observe", "neutral"],
+      "format": "count",
+      "live": false,
+      "defaultOnFace": true
+    },
+    {
+      "id": "count-today",
+      "label": "Today",
+      "description": "Times logged today",
+      "needsInputs": [],
+      "appliesTo": ["build", "observe", "neutral"],
+      "format": "count",
+      "live": false,
+      "defaultOnFace": true
+    },
+    {
+      "id": "count-week",
+      "label": "This week",
+      "description": "Times logged this week",
+      "needsInputs": [],
+      "appliesTo": ["build", "observe", "neutral"],
+      "format": "count",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "count-month",
+      "label": "This month",
+      "description": "Times logged this month",
+      "needsInputs": [],
+      "appliesTo": ["build", "observe", "neutral"],
+      "format": "count",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "avg-per-day",
+      "label": "Daily average",
+      "description": "Average per day (rolling 30 days)",
+      "needsInputs": [],
+      "appliesTo": ["build", "observe", "neutral"],
+      "format": "decimal",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "total-lapses",
+      "label": "Total slips",
+      "description": "Number of times you've slipped (across all attempts)",
+      "needsInputs": [],
+      "appliesTo": ["quit"],
+      "format": "count",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "goal-progress",
+      "label": "Goal progress",
+      "description": "Progress toward your daily goal",
+      "needsInputs": ["dailyGoal"],
+      "appliesTo": ["build"],
+      "format": "percent",
+      "live": false,
+      "defaultOnFace": true
+    },
+    {
+      "id": "projected-yearly-savings",
+      "label": "Yearly savings (projected)",
+      "description": "Money you'll save in a year at this rate",
+      "needsInputs": ["costPerUnit", "baselinePerDay"],
+      "appliesTo": ["quit"],
+      "format": "currency",
+      "live": false,
+      "defaultOnFace": false
+    }
+  ]
+}
