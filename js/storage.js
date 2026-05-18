@@ -3,7 +3,7 @@
    localStorage abstraction. All state read/write goes through here.
    =================================================================== */
 
-const TB = window.TB = window.TB || {};
+var TB = window.TB = window.TB || {};
 
 TB.Storage = (function () {
   const STORAGE_KEY = 'trackingBuddy.v1';

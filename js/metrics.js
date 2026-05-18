@@ -3,7 +3,7 @@
    Computes any metric for any tile from raw data + inputs.
    =================================================================== */
 
-const TB = window.TB = window.TB || {};
+var TB = window.TB = window.TB || {};
 
 TB.Metrics = (function () {
   // ========== Formatters ==========

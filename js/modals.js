@@ -3,7 +3,7 @@
    Settings, dashboard manager, onboarding wizard, export/import.
    =================================================================== */
 
-const TB = window.TB = window.TB || {};
+var TB = window.TB = window.TB || {};
 
 TB.Modals = (function () {
 

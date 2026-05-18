@@ -3,7 +3,7 @@
    Tile rendering, create/edit modal, detail view, quick log handling.
    =================================================================== */
 
-const TB = window.TB = window.TB || {};
+var TB = window.TB = window.TB || {};
 
 TB.Tiles = (function () {
   // ===== Renders a single tile element =====

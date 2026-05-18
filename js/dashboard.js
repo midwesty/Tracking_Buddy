@@ -3,7 +3,7 @@
    Renders the active dashboard, dashboard switcher, edit mode.
    =================================================================== */
 
-const TB = window.TB = window.TB || {};
+var TB = window.TB = window.TB || {};
 
 TB.Dashboard = (function () {
   let editMode = false;

@@ -3,7 +3,7 @@
    Shared UI helpers: toasts, modals, confetti, image fallbacks.
    =================================================================== */
 
-const TB = window.TB = window.TB || {};
+var TB = window.TB = window.TB || {};
 
 TB.UI = (function () {
   // ===== Toast =====

@@ -3,7 +3,7 @@
    Entry point. Loads JSON data, initializes storage, wires UI.
    =================================================================== */
 
-const TB = window.TB = window.TB || {};
+var TB = window.TB = window.TB || {};
 TB.Data = TB.Data || {};
 
 (async function init() {
