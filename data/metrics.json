@@ -1,5 +1,5 @@
 {
-  "_note": "Each metric declares what inputs it needs and how to format. The actual computation lives in js/metrics.js — this file is metadata that drives the UI.",
+  "_note": "Each metric declares what inputs it needs and how to format. Actual computation lives in js/metrics.js — this file is metadata that drives the UI.",
   "metrics": [
     {
       "id": "time-since",
@@ -14,7 +14,7 @@
     {
       "id": "current-streak",
       "label": "Current streak",
-      "description": "Days in your current streak",
+      "description": "Days in your current streak / attempt",
       "needsInputs": [],
       "appliesTo": ["quit", "build"],
       "format": "days",
@@ -24,7 +24,7 @@
     {
       "id": "longest-streak",
       "label": "Longest streak",
-      "description": "Your personal best streak",
+      "description": "Your personal best — longest single attempt",
       "needsInputs": [],
       "appliesTo": ["quit", "build"],
       "format": "days",
@@ -33,8 +33,8 @@
     },
     {
       "id": "money-saved",
-      "label": "Money saved",
-      "description": "Money saved by avoiding this — accumulates live",
+      "label": "Money saved (current)",
+      "description": "Money saved during the current attempt only",
       "needsInputs": ["costPerUnit", "baselinePerDay"],
       "appliesTo": ["quit"],
       "format": "currency",
@@ -53,8 +53,8 @@
     },
     {
       "id": "units-avoided",
-      "label": "Units avoided",
-      "description": "How many units you haven't consumed",
+      "label": "Units avoided (current)",
+      "description": "How many units you haven't consumed during this attempt",
       "needsInputs": ["baselinePerDay"],
       "appliesTo": ["quit"],
       "format": "count",
@@ -63,8 +63,8 @@
     },
     {
       "id": "time-avoided",
-      "label": "Time reclaimed",
-      "description": "Total time not spent on this habit",
+      "label": "Time reclaimed (current)",
+      "description": "Time not spent on this habit during this attempt",
       "needsInputs": ["timePerUnit", "baselinePerDay"],
       "appliesTo": ["quit"],
       "format": "duration",
@@ -124,7 +124,7 @@
     {
       "id": "total-lapses",
       "label": "Total slips",
-      "description": "Number of times you've slipped (across all attempts)",
+      "description": "Number of slip-ups across all attempts",
       "needsInputs": [],
       "appliesTo": ["quit"],
       "format": "count",
@@ -147,6 +147,156 @@
       "description": "Money you'll save in a year at this rate",
       "needsInputs": ["costPerUnit", "baselinePerDay"],
       "appliesTo": ["quit"],
+      "format": "currency",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "lifetime-money-saved",
+      "label": "Lifetime money saved",
+      "description": "Money saved across all attempts combined — slips don't erase it",
+      "needsInputs": ["costPerUnit", "baselinePerDay"],
+      "appliesTo": ["quit"],
+      "format": "currency",
+      "live": true,
+      "defaultOnFace": false
+    },
+    {
+      "id": "lifetime-units-avoided",
+      "label": "Lifetime units avoided",
+      "description": "Total units avoided across every attempt",
+      "needsInputs": ["baselinePerDay"],
+      "appliesTo": ["quit"],
+      "format": "count",
+      "live": true,
+      "defaultOnFace": false
+    },
+    {
+      "id": "lifetime-time-reclaimed",
+      "label": "Lifetime time reclaimed",
+      "description": "Total time saved across all attempts",
+      "needsInputs": ["timePerUnit", "baselinePerDay"],
+      "appliesTo": ["quit"],
+      "format": "duration",
+      "live": true,
+      "defaultOnFace": false
+    },
+    {
+      "id": "lifetime-days-clean",
+      "label": "Total days clean",
+      "description": "Sum of all attempt durations — the real story",
+      "needsInputs": [],
+      "appliesTo": ["quit"],
+      "format": "days",
+      "live": true,
+      "defaultOnFace": false
+    },
+    {
+      "id": "total-attempts",
+      "label": "Total attempts",
+      "description": "How many fresh starts you've taken",
+      "needsInputs": [],
+      "appliesTo": ["quit"],
+      "format": "count",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "avg-attempt-length",
+      "label": "Average attempt",
+      "description": "Mean duration of your attempts",
+      "needsInputs": [],
+      "appliesTo": ["quit"],
+      "format": "days",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "best-attempt",
+      "label": "Best attempt",
+      "description": "Your longest single attempt ever",
+      "needsInputs": [],
+      "appliesTo": ["quit"],
+      "format": "days",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "total-earned",
+      "label": "Total earned",
+      "description": "Sum of all sale amounts",
+      "needsInputs": [],
+      "appliesTo": ["earn"],
+      "format": "currency",
+      "live": false,
+      "defaultOnFace": true
+    },
+    {
+      "id": "earned-today",
+      "label": "Earned today",
+      "description": "Sum of sales logged today",
+      "needsInputs": [],
+      "appliesTo": ["earn"],
+      "format": "currency",
+      "live": false,
+      "defaultOnFace": true
+    },
+    {
+      "id": "earned-week",
+      "label": "Earned this week",
+      "description": "Sum of sales this week",
+      "needsInputs": [],
+      "appliesTo": ["earn"],
+      "format": "currency",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "earned-month",
+      "label": "Earned this month",
+      "description": "Sum of sales this month",
+      "needsInputs": [],
+      "appliesTo": ["earn"],
+      "format": "currency",
+      "live": false,
+      "defaultOnFace": true
+    },
+    {
+      "id": "avg-per-sale",
+      "label": "Average sale",
+      "description": "Mean sale amount across all sales",
+      "needsInputs": [],
+      "appliesTo": ["earn"],
+      "format": "currency",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "sales-count",
+      "label": "Total sales",
+      "description": "Number of sales logged",
+      "needsInputs": [],
+      "appliesTo": ["earn"],
+      "format": "count",
+      "live": false,
+      "defaultOnFace": true
+    },
+    {
+      "id": "projected-yearly-earnings",
+      "label": "Projected yearly earnings",
+      "description": "Annualized at current rate",
+      "needsInputs": [],
+      "appliesTo": ["earn"],
+      "format": "currency",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "biggest-sale",
+      "label": "Biggest sale",
+      "description": "Largest single sale amount",
+      "needsInputs": [],
+      "appliesTo": ["earn"],
       "format": "currency",
       "live": false,
       "defaultOnFace": false

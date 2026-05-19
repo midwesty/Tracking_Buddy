@@ -1151,3 +1151,153 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   animation: popIn 0.3s ease-out;
 }
+
+/* ===================================================================
+   v0.002 additions: 2-col tile body, earn type, attempts, audit, drag
+   =================================================================== */
+
+/* Two-column tile body for wide/large with many metrics */
+.tile-body.tile-body-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+}
+.tile-body.tile-body-2col .tile-metric {
+  min-width: 0;
+}
+.tile-body.tile-body-2col .tile-metric-value {
+  font-size: 1.15rem;
+  line-height: 1.15;
+}
+.tile-body.tile-body-2col .tile-metric-label {
+  font-size: 0.62rem;
+}
+
+/* Earn tile type */
+.tile.type-earn {
+  border-color: #FFB627;
+}
+.tile-quick-log.earn-mode {
+  background: #FFB627;
+  box-shadow: 0 3px 0 #D89400, 0 4px 12px rgba(0,0,0,0.12);
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+/* Attempts history */
+.attempts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.attempt-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--surface-alt, #FAFAF5);
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid var(--border, #E8E5D8);
+}
+.attempt-num {
+  font-weight: 800;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  min-width: 28px;
+}
+.attempt-info { flex: 1; min-width: 0; }
+.attempt-dur {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+.attempt-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.attempt-current { color: var(--success, #4CB944); font-weight: 700; }
+.attempt-lapse { color: var(--danger, #E5484D); }
+.attempt-manual { color: var(--text-muted); }
+
+/* Audit log */
+.detail-collapsible {
+  margin-top: 16px;
+  border-top: 1px solid var(--border, #E8E5D8);
+  padding-top: 16px;
+}
+.detail-collapsible > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.detail-collapsible > summary::-webkit-details-marker { display: none; }
+.detail-collapsible > summary::before {
+  content: '▸ ';
+  display: inline-block;
+  transition: transform 0.15s;
+  font-size: 0.8em;
+}
+.detail-collapsible[open] > summary::before {
+  transform: rotate(90deg);
+}
+.audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+.audit-item {
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface-alt, #FAFAF5);
+  border-radius: var(--radius-sm, 6px);
+  align-items: baseline;
+}
+.audit-time {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 80px;
+}
+.audit-note {
+  color: var(--text);
+  flex: 1;
+}
+
+/* Drag placeholder */
+.tile-placeholder {
+  border-radius: var(--radius-lg, 16px);
+  background: transparent;
+  outline: 3px dashed var(--accent, #5BA856);
+  outline-offset: -3px;
+  opacity: 0.55;
+}
+.tile.dragging {
+  opacity: 0.95;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.22), 0 0 0 2px var(--accent, #5BA856);
+}
+
+/* Edit mode wiggle so users know they can drag */
+.dashboard.edit-mode .tile:not(.system):not(.dragging) {
+  animation: tile-wiggle 0.4s ease-in-out infinite alternate;
+  animation-delay: calc(var(--tile-i, 0) * 0.05s);
+}
+@keyframes tile-wiggle {
+  from { transform: rotate(-0.6deg); }
+  to   { transform: rotate(0.6deg); }
+}
+
+/* Ghost button used for "or enter bundle pricing" disclosure */
+.btn-ghost {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+}
+.btn-ghost:hover { opacity: 0.8; }

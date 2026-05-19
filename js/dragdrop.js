@@ -1,6 +1,6 @@
 /* ===================================================================
-   Tracking Buddy — dragdrop.js
-   Drag-to-reorder tiles. Mobile: long-press to start. Desktop: drag in edit mode.
+   Tracking Buddy — dragdrop.js (v0.002)
+   Drag-to-reorder tiles. Touch-first, iOS Safari friendly.
    =================================================================== */
 
 var TB = window.TB = window.TB || {};
@@ -9,9 +9,10 @@ TB.DragDrop = (function () {
   let dragging = null;
   let placeholder = null;
   let startPoint = null;
-  let longPressTimer = null;
   let isEditMode = false;
   let containerEl = null;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
 
   function setEditMode(on, container) {
     isEditMode = on;
@@ -27,53 +28,107 @@ TB.DragDrop = (function () {
 
   function attach() {
     if (!containerEl) return;
-    // Pointer events handle both mouse and touch uniformly
-    containerEl.addEventListener('pointerdown', onPointerDown);
+    // Touch events on individual tiles for iOS compatibility
+    containerEl.querySelectorAll('.tile').forEach(tile => {
+      if (tile.classList.contains('system')) return;
+      tile.addEventListener('touchstart', onTouchStart, { passive: false });
+      tile.addEventListener('mousedown', onMouseDown);
+    });
   }
 
   function detach() {
     if (!containerEl) return;
-    containerEl.removeEventListener('pointerdown', onPointerDown);
-    document.removeEventListener('pointermove', onPointerMove);
-    document.removeEventListener('pointerup', onPointerUp);
-    document.removeEventListener('pointercancel', onPointerUp);
-    if (longPressTimer) clearTimeout(longPressTimer);
+    containerEl.querySelectorAll('.tile').forEach(tile => {
+      tile.removeEventListener('touchstart', onTouchStart);
+      tile.removeEventListener('mousedown', onMouseDown);
+    });
+    document.removeEventListener('touchmove', onTouchMove);
+    document.removeEventListener('touchend', onTouchEnd);
+    document.removeEventListener('touchcancel', onTouchEnd);
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
     cleanupDrag();
   }
 
-  function onPointerDown(e) {
-    // Must be in edit mode and click on a tile (not the delete button)
+  // ---- Touch handlers ----
+  function onTouchStart(e) {
     if (!isEditMode) return;
     if (e.target.closest('[data-action="delete-tile"]')) return;
-    const tileEl = e.target.closest('.tile');
-    if (!tileEl || tileEl.classList.contains('system')) return; // don't drag system tile
+    if (e.touches.length !== 1) return;
+    const tileEl = e.currentTarget;
+    if (tileEl.classList.contains('system')) return;
 
-    startPoint = { x: e.clientX, y: e.clientY, tileEl, pointerId: e.pointerId };
+    const t = e.touches[0];
+    startPoint = { x: t.clientX, y: t.clientY, tileEl };
 
-    // Slight delay before locking drag so taps aren't accidentally drags
-    longPressTimer = setTimeout(() => {
-      startDrag(tileEl, e);
-    }, 150);
+    // Begin drag immediately on touchstart in edit mode — feels snappier
+    startDrag(tileEl, t.clientX, t.clientY);
+    e.preventDefault();
 
-    document.addEventListener('pointermove', onPointerMove);
-    document.addEventListener('pointerup', onPointerUp);
-    document.addEventListener('pointercancel', onPointerUp);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd, { passive: false });
+    document.addEventListener('touchcancel', onTouchEnd, { passive: false });
   }
 
-  function startDrag(tileEl, e) {
+  function onTouchMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    moveTo(t.clientX, t.clientY);
+  }
+
+  function onTouchEnd(e) {
+    document.removeEventListener('touchmove', onTouchMove);
+    document.removeEventListener('touchend', onTouchEnd);
+    document.removeEventListener('touchcancel', onTouchEnd);
+    finishDrag();
+  }
+
+  // ---- Mouse handlers (desktop) ----
+  function onMouseDown(e) {
+    if (!isEditMode) return;
+    if (e.button !== 0) return;
+    if (e.target.closest('[data-action="delete-tile"]')) return;
+    const tileEl = e.currentTarget;
+    if (tileEl.classList.contains('system')) return;
+    startPoint = { x: e.clientX, y: e.clientY, tileEl };
+    startDrag(tileEl, e.clientX, e.clientY);
+    e.preventDefault();
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+  function onMouseMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    moveTo(e.clientX, e.clientY);
+  }
+  function onMouseUp(e) {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    finishDrag();
+  }
+
+  // ---- Drag logic ----
+  function startDrag(tileEl, x, y) {
     dragging = tileEl;
     tileEl.classList.add('dragging');
-    // Create placeholder (invisible spacer that takes the tile's grid spot)
+
+    // Create placeholder that holds the grid slot
+    const rect = tileEl.getBoundingClientRect();
     placeholder = document.createElement('div');
     placeholder.className = 'tile-placeholder';
-    placeholder.style.cssText = 'visibility:hidden;';
-    // Copy shape class for grid sizing
     tileEl.classList.forEach(c => { if (c.startsWith('shape-')) placeholder.classList.add(c); });
-    placeholder.style.minHeight = tileEl.offsetHeight + 'px';
+    placeholder.style.minHeight = rect.height + 'px';
+    placeholder.style.background = 'transparent';
+    placeholder.style.outline = '3px dashed var(--accent)';
+    placeholder.style.outlineOffset = '-3px';
+    placeholder.style.borderRadius = 'var(--radius-lg)';
     tileEl.parentNode.insertBefore(placeholder, tileEl);
 
-    // Position the dragged tile absolutely under the pointer
-    const rect = tileEl.getBoundingClientRect();
+    // Pin tile to viewport, offset so pointer stays where user grabbed
+    dragOffsetX = x - rect.left;
+    dragOffsetY = y - rect.top;
     tileEl.style.position = 'fixed';
     tileEl.style.top = rect.top + 'px';
     tileEl.style.left = rect.left + 'px';
@@ -82,80 +137,59 @@ TB.DragDrop = (function () {
     tileEl.style.zIndex = '1000';
     tileEl.style.pointerEvents = 'none';
     tileEl.style.transform = 'scale(1.05)';
+    tileEl.style.transition = 'none';
   }
 
-  function onPointerMove(e) {
-    if (!startPoint) return;
-    const dx = e.clientX - startPoint.x;
-    const dy = e.clientY - startPoint.y;
-    // If the user moved without long-press triggering, cancel long-press (they may be scrolling)
-    if (!dragging && Math.sqrt(dx * dx + dy * dy) > 10) {
-      // Begin drag immediately on movement past threshold
-      clearTimeout(longPressTimer);
-      startDrag(startPoint.tileEl, e);
-    }
-
+  function moveTo(x, y) {
     if (!dragging) return;
-    e.preventDefault();
+    dragging.style.left = (x - dragOffsetX) + 'px';
+    dragging.style.top = (y - dragOffsetY) + 'px';
 
-    // Move tile to pointer
-    const rect = dragging.getBoundingClientRect();
-    const offsetX = e.clientX - (rect.left + rect.width / 2);
-    const offsetY = e.clientY - (rect.top + rect.height / 2);
-    dragging.style.left = (parseFloat(dragging.style.left) + offsetX) + 'px';
-    dragging.style.top = (parseFloat(dragging.style.top) + offsetY) + 'px';
+    // Find element under pointer
+    dragging.style.visibility = 'hidden';
+    const below = document.elementFromPoint(x, y);
+    dragging.style.visibility = '';
+    if (!below) return;
 
-    // Find tile under pointer
-    dragging.style.display = 'none';
-    const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
-    dragging.style.display = '';
-    const targetTile = elementBelow ? elementBelow.closest('.tile') : null;
-    if (targetTile && targetTile !== dragging && targetTile !== placeholder &&
-        !targetTile.classList.contains('system')) {
-      // Move placeholder to before/after the target
-      const targetRect = targetTile.getBoundingClientRect();
-      const midX = targetRect.left + targetRect.width / 2;
-      const midY = targetRect.top + targetRect.height / 2;
-      const placeAfter = e.clientX > midX || e.clientY > midY;
-      if (placeAfter) {
-        targetTile.parentNode.insertBefore(placeholder, targetTile.nextSibling);
-      } else {
-        targetTile.parentNode.insertBefore(placeholder, targetTile);
-      }
+    const target = below.closest('.tile');
+    if (!target || target === dragging || target === placeholder) return;
+    if (target.classList.contains('system')) return;
+
+    const targetRect = target.getBoundingClientRect();
+    const placeAfter = y > targetRect.top + targetRect.height / 2;
+    if (placeAfter) {
+      target.parentNode.insertBefore(placeholder, target.nextSibling);
+    } else {
+      target.parentNode.insertBefore(placeholder, target);
     }
   }
 
-  function onPointerUp(e) {
-    clearTimeout(longPressTimer);
-    document.removeEventListener('pointermove', onPointerMove);
-    document.removeEventListener('pointerup', onPointerUp);
-    document.removeEventListener('pointercancel', onPointerUp);
+  function finishDrag() {
+    if (!dragging || !placeholder) { cleanupDrag(); return; }
 
-    if (dragging && placeholder) {
-      // Drop dragging in placeholder's spot
-      placeholder.parentNode.insertBefore(dragging, placeholder);
-      placeholder.remove();
-      placeholder = null;
+    // Drop in placeholder location
+    placeholder.parentNode.insertBefore(dragging, placeholder);
+    placeholder.remove();
+    placeholder = null;
 
-      // Reset styles
-      dragging.style.position = '';
-      dragging.style.top = '';
-      dragging.style.left = '';
-      dragging.style.width = '';
-      dragging.style.height = '';
-      dragging.style.zIndex = '';
-      dragging.style.pointerEvents = '';
-      dragging.style.transform = '';
-      dragging.classList.remove('dragging');
+    // Reset dragging style
+    dragging.style.position = '';
+    dragging.style.top = '';
+    dragging.style.left = '';
+    dragging.style.width = '';
+    dragging.style.height = '';
+    dragging.style.zIndex = '';
+    dragging.style.pointerEvents = '';
+    dragging.style.transform = '';
+    dragging.style.transition = '';
+    dragging.classList.remove('dragging');
 
-      // Compute new order and save
-      const order = [];
-      const tiles = containerEl.querySelectorAll('.tile');
-      tiles.forEach(t => order.push(t.dataset.tileId));
-      TB.Storage.reorderTiles(order);
+    // Save new order
+    const order = [];
+    containerEl.querySelectorAll('.tile').forEach(t => order.push(t.dataset.tileId));
+    TB.Storage.reorderTiles(order);
 
-      dragging = null;
-    }
+    dragging = null;
     startPoint = null;
   }
 

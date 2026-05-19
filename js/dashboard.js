@@ -145,7 +145,7 @@ TB.Dashboard = (function () {
         unitName: 'thing',
         unitNamePlural: 'things',
         inputs: {},
-        faceMetrics: ['tb-days-using', 'tb-tiles-created', 'tb-total-logs'],
+        faceMetrics: ['tb-days-using', 'tb-tiles-created', 'tb-total-logs', 'tb-total-lapses', 'tb-money-saved', 'tb-total-earned'],
         paused: false,
         pausedAt: null,
         pauseDuration: 0,
@@ -153,6 +153,8 @@ TB.Dashboard = (function () {
         streakStart: state.meta.firstLaunch || Date.now(),
         longestStreak: 0,
         logs: [],
+        attempts: [],
+        auditLog: [],
         system: true
       };
       state.tiles[sys.id] = sys;

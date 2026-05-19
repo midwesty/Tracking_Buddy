@@ -1,5 +1,5 @@
 {
-  "_note": "Starter tile presets. Users can pick one and customize. Each preset declares its type, default metrics, and any cost/time/baseline defaults to suggest.",
+  "_note": "Starter tile presets. Users can pick one and customize.",
   "presets": [
     {
       "id": "preset-cigarettes",
@@ -17,7 +17,7 @@
         "timePerUnitMinutes": 6,
         "baselinePerDay": 15
       },
-      "defaultMetrics": ["time-since", "money-saved", "current-streak", "units-avoided"]
+      "defaultMetrics": ["time-since", "lifetime-money-saved", "current-streak", "total-attempts"]
     },
     {
       "id": "preset-vape",
@@ -35,7 +35,7 @@
         "timePerUnitMinutes": 1,
         "baselinePerDay": 100
       },
-      "defaultMetrics": ["time-since", "money-saved", "current-streak"]
+      "defaultMetrics": ["time-since", "lifetime-money-saved", "current-streak"]
     },
     {
       "id": "preset-alcohol",
@@ -49,7 +49,7 @@
         "costPerUnit": 8,
         "baselinePerDay": 3
       },
-      "defaultMetrics": ["time-since", "current-streak", "longest-streak", "money-saved"]
+      "defaultMetrics": ["time-since", "current-streak", "lifetime-money-saved", "total-attempts"]
     },
     {
       "id": "preset-water",
@@ -142,19 +142,6 @@
       "defaultMetrics": ["total-count", "count-week", "time-since"]
     },
     {
-      "id": "preset-savings",
-      "name": "Savings goal",
-      "type": "build",
-      "iconId": "money",
-      "unitName": "deposit",
-      "unitNamePlural": "deposits",
-      "color": "#4CB944",
-      "suggestedInputs": {
-        "costPerUnit": 10
-      },
-      "defaultMetrics": ["total-count", "money-spent", "current-streak"]
-    },
-    {
       "id": "preset-arguments",
       "name": "Days since last argument",
       "type": "quit",
@@ -164,6 +151,39 @@
       "color": "#FF8FA3",
       "suggestedInputs": {},
       "defaultMetrics": ["time-since", "current-streak", "longest-streak"]
+    },
+    {
+      "id": "preset-etsy",
+      "name": "Etsy sales",
+      "type": "earn",
+      "iconId": "art",
+      "unitName": "sale",
+      "unitNamePlural": "sales",
+      "color": "#FF7849",
+      "suggestedInputs": {},
+      "defaultMetrics": ["total-earned", "earned-month", "sales-count", "avg-per-sale"]
+    },
+    {
+      "id": "preset-freelance",
+      "name": "Freelance income",
+      "type": "earn",
+      "iconId": "code",
+      "unitName": "invoice",
+      "unitNamePlural": "invoices",
+      "color": "#4CB944",
+      "suggestedInputs": {},
+      "defaultMetrics": ["total-earned", "earned-month", "projected-yearly-earnings"]
+    },
+    {
+      "id": "preset-tips",
+      "name": "Tips & gigs",
+      "type": "earn",
+      "iconId": "money",
+      "unitName": "tip",
+      "unitNamePlural": "tips",
+      "color": "#FFB627",
+      "suggestedInputs": {},
+      "defaultMetrics": ["total-earned", "earned-today", "earned-week"]
     },
     {
       "id": "preset-custom",
