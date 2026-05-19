@@ -1,100 +1,111 @@
 /* ===================================================================
-   Tracking Buddy — dragdrop.js (v0.002)
+   Tracking Buddy — dragdrop.js (v0.003)
    Drag-to-reorder tiles. Touch-first, iOS Safari friendly.
+
+   Strategy: delegation at the grid level (not per-tile). Listeners
+   are attached once when the grid mounts and stay; we just check
+   editMode flag inside the handler. This avoids iOS Safari's
+   inconsistent passive-listener registration mid-gesture.
    =================================================================== */
 
 var TB = window.TB = window.TB || {};
 
 TB.DragDrop = (function () {
-  let dragging = null;
-  let placeholder = null;
-  let startPoint = null;
+  let dragging = null;       // the tile element being dragged
+  let placeholder = null;    // DOM placeholder holding the grid slot
   let isEditMode = false;
   let containerEl = null;
   let dragOffsetX = 0;
   let dragOffsetY = 0;
+  let touchStarted = false;  // guards against duplicate touch/mouse on hybrid devices
+  let listenersAttached = false;
 
   function setEditMode(on, container) {
     isEditMode = on;
     containerEl = container;
     if (on) {
       container.classList.add('edit-mode');
-      attach();
+      attachOnce();
     } else {
       container.classList.remove('edit-mode');
-      detach();
+      // Don't detach — listeners are cheap to leave attached and they short-circuit on !isEditMode
+      cleanupDrag();
     }
   }
 
-  function attach() {
+  // Attach grid-level listeners exactly once per container lifetime.
+  function attachOnce() {
     if (!containerEl) return;
-    // Touch events on individual tiles for iOS compatibility
-    containerEl.querySelectorAll('.tile').forEach(tile => {
-      if (tile.classList.contains('system')) return;
-      tile.addEventListener('touchstart', onTouchStart, { passive: false });
-      tile.addEventListener('mousedown', onMouseDown);
-    });
-  }
+    if (listenersAttached && containerEl._tbDragAttached) return;
 
-  function detach() {
-    if (!containerEl) return;
-    containerEl.querySelectorAll('.tile').forEach(tile => {
-      tile.removeEventListener('touchstart', onTouchStart);
-      tile.removeEventListener('mousedown', onMouseDown);
-    });
-    document.removeEventListener('touchmove', onTouchMove);
-    document.removeEventListener('touchend', onTouchEnd);
-    document.removeEventListener('touchcancel', onTouchEnd);
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-    cleanupDrag();
+    // Touch — register at grid level with passive: false so we can preventDefault
+    containerEl.addEventListener('touchstart', onTouchStart, { passive: false });
+    containerEl.addEventListener('touchmove', onTouchMove, { passive: false });
+    containerEl.addEventListener('touchend', onTouchEnd, { passive: false });
+    containerEl.addEventListener('touchcancel', onTouchEnd, { passive: false });
+
+    // Mouse for desktop
+    containerEl.addEventListener('mousedown', onMouseDown);
+
+    containerEl._tbDragAttached = true;
+    listenersAttached = true;
   }
 
   // ---- Touch handlers ----
   function onTouchStart(e) {
     if (!isEditMode) return;
-    if (e.target.closest('[data-action="delete-tile"]')) return;
     if (e.touches.length !== 1) return;
-    const tileEl = e.currentTarget;
+
+    const target = e.target;
+    // Ignore taps on the delete-X corner button
+    if (target.closest && target.closest('[data-action="delete-tile"]')) return;
+
+    // Find the tile root from event target (works even if touch starts on a child element)
+    const tileEl = target.closest && target.closest('.tile');
+    if (!tileEl) return;
     if (tileEl.classList.contains('system')) return;
+    if (!containerEl.contains(tileEl)) return;
 
+    touchStarted = true;
     const t = e.touches[0];
-    startPoint = { x: t.clientX, y: t.clientY, tileEl };
-
-    // Begin drag immediately on touchstart in edit mode — feels snappier
     startDrag(tileEl, t.clientX, t.clientY);
     e.preventDefault();
-
-    document.addEventListener('touchmove', onTouchMove, { passive: false });
-    document.addEventListener('touchend', onTouchEnd, { passive: false });
-    document.addEventListener('touchcancel', onTouchEnd, { passive: false });
+    e.stopPropagation();
   }
 
   function onTouchMove(e) {
-    if (!dragging) return;
-    e.preventDefault();
+    if (!isEditMode || !dragging) return;
     if (e.touches.length !== 1) return;
+    e.preventDefault();
+    e.stopPropagation();
     const t = e.touches[0];
     moveTo(t.clientX, t.clientY);
   }
 
   function onTouchEnd(e) {
-    document.removeEventListener('touchmove', onTouchMove);
-    document.removeEventListener('touchend', onTouchEnd);
-    document.removeEventListener('touchcancel', onTouchEnd);
+    if (!isEditMode) return;
+    if (!dragging) return;
+    e.preventDefault();
     finishDrag();
+    // Allow a moment before allowing mouse events again (hybrid devices)
+    setTimeout(() => { touchStarted = false; }, 350);
   }
 
   // ---- Mouse handlers (desktop) ----
   function onMouseDown(e) {
     if (!isEditMode) return;
+    if (touchStarted) return;
     if (e.button !== 0) return;
-    if (e.target.closest('[data-action="delete-tile"]')) return;
-    const tileEl = e.currentTarget;
+    const target = e.target;
+    if (target.closest && target.closest('[data-action="delete-tile"]')) return;
+    const tileEl = target.closest && target.closest('.tile');
+    if (!tileEl) return;
     if (tileEl.classList.contains('system')) return;
-    startPoint = { x: e.clientX, y: e.clientY, tileEl };
+    if (!containerEl.contains(tileEl)) return;
+
     startDrag(tileEl, e.clientX, e.clientY);
     e.preventDefault();
+
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
   }
@@ -106,6 +117,7 @@ TB.DragDrop = (function () {
   function onMouseUp(e) {
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
+    if (!dragging) return;
     finishDrag();
   }
 
@@ -114,16 +126,13 @@ TB.DragDrop = (function () {
     dragging = tileEl;
     tileEl.classList.add('dragging');
 
-    // Create placeholder that holds the grid slot
     const rect = tileEl.getBoundingClientRect();
+
+    // Placeholder holds the grid slot during drag
     placeholder = document.createElement('div');
     placeholder.className = 'tile-placeholder';
     tileEl.classList.forEach(c => { if (c.startsWith('shape-')) placeholder.classList.add(c); });
     placeholder.style.minHeight = rect.height + 'px';
-    placeholder.style.background = 'transparent';
-    placeholder.style.outline = '3px dashed var(--accent)';
-    placeholder.style.outlineOffset = '-3px';
-    placeholder.style.borderRadius = 'var(--radius-lg)';
     tileEl.parentNode.insertBefore(placeholder, tileEl);
 
     // Pin tile to viewport, offset so pointer stays where user grabbed
@@ -138,6 +147,10 @@ TB.DragDrop = (function () {
     tileEl.style.pointerEvents = 'none';
     tileEl.style.transform = 'scale(1.05)';
     tileEl.style.transition = 'none';
+    tileEl.style.animation = 'none'; // stop wiggle on the one being dragged
+
+    // Provide haptic on supported devices
+    if (navigator.vibrate) navigator.vibrate(15);
   }
 
   function moveTo(x, y) {
@@ -145,15 +158,17 @@ TB.DragDrop = (function () {
     dragging.style.left = (x - dragOffsetX) + 'px';
     dragging.style.top = (y - dragOffsetY) + 'px';
 
-    // Find element under pointer
+    // Find element under pointer (hide dragging tile temporarily so hit-test sees what's behind)
+    const prevVis = dragging.style.visibility;
     dragging.style.visibility = 'hidden';
     const below = document.elementFromPoint(x, y);
-    dragging.style.visibility = '';
+    dragging.style.visibility = prevVis;
     if (!below) return;
 
-    const target = below.closest('.tile');
+    const target = below.closest && below.closest('.tile');
     if (!target || target === dragging || target === placeholder) return;
     if (target.classList.contains('system')) return;
+    if (!containerEl.contains(target)) return;
 
     const targetRect = target.getBoundingClientRect();
     const placeAfter = y > targetRect.top + targetRect.height / 2;
@@ -167,12 +182,10 @@ TB.DragDrop = (function () {
   function finishDrag() {
     if (!dragging || !placeholder) { cleanupDrag(); return; }
 
-    // Drop in placeholder location
     placeholder.parentNode.insertBefore(dragging, placeholder);
     placeholder.remove();
     placeholder = null;
 
-    // Reset dragging style
     dragging.style.position = '';
     dragging.style.top = '';
     dragging.style.left = '';
@@ -182,15 +195,15 @@ TB.DragDrop = (function () {
     dragging.style.pointerEvents = '';
     dragging.style.transform = '';
     dragging.style.transition = '';
+    dragging.style.animation = '';
     dragging.classList.remove('dragging');
 
-    // Save new order
+    // Persist new order
     const order = [];
     containerEl.querySelectorAll('.tile').forEach(t => order.push(t.dataset.tileId));
     TB.Storage.reorderTiles(order);
 
     dragging = null;
-    startPoint = null;
   }
 
   function cleanupDrag() {
@@ -200,7 +213,6 @@ TB.DragDrop = (function () {
       dragging = null;
     }
     if (placeholder) { placeholder.remove(); placeholder = null; }
-    startPoint = null;
   }
 
   return { setEditMode };

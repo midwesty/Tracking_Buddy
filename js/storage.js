@@ -7,7 +7,7 @@ var TB = window.TB = window.TB || {};
 
 TB.Storage = (function () {
   const STORAGE_KEY = 'trackingBuddy.v1';
-  const APP_VERSION = '0.002';
+  const APP_VERSION = '0.003';
 
   function makeDefaultState() {
     const now = Date.now();
@@ -119,6 +119,11 @@ TB.Storage = (function () {
         (tile.logs || []).forEach(l => { if (l.count == null) l.count = 1; });
       });
       state.version = '0.002';
+    }
+
+    // v0.002 → v0.003: no schema changes, just version bump
+    if (compareVersion(state.version, '0.003') < 0) {
+      state.version = '0.003';
     }
   }
 

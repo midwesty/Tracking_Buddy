@@ -55,6 +55,15 @@ TB.Data = TB.Data || {};
     settingsBtn.addEventListener('click', () => TB.Modals.openSettings());
   }
 
+  // v0.003: explicit Rearrange button — bulletproof entry into drag mode
+  const rearrangeBtn = document.getElementById('rearrange-btn');
+  if (rearrangeBtn) {
+    rearrangeBtn.addEventListener('click', () => {
+      const newMode = !TB.Dashboard.isEditMode();
+      TB.Dashboard.setEditMode(newMode);
+    });
+  }
+
   // ===== Wire FAB =====
   const fab = document.getElementById('fab-add');
   if (fab) {

@@ -1301,3 +1301,252 @@
   text-decoration: underline;
 }
 .btn-ghost:hover { opacity: 0.8; }
+
+/* ===================================================================
+   v0.003 additions: rearrange button, mascot placements, timeline
+   =================================================================== */
+
+/* Active state for rearrange button when in edit mode */
+#rearrange-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(91, 168, 86, 0.25);
+}
+
+/* Larger, clearer edit banner with instructions */
+.edit-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.edit-banner-mascot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: white;
+  flex-shrink: 0;
+}
+.edit-banner-mascot img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+
+/* Mascot used as a flag badge on goal-hit tiles */
+.tile-goal-flag {
+  position: absolute;
+  top: 8px;
+  right: 38px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--success, #4CB944);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.tile-goal-flag img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+/* Sleeping mascot indicator on inactive tiles */
+.tile-sleep-indicator {
+  position: absolute;
+  top: 8px;
+  right: 38px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  opacity: 0.85;
+}
+.tile-sleep-indicator img {
+  width: 22px;
+  height: 22px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Detail view hero mascot for paused tiles */
+.detail-paused-mascot {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  margin-left: 10px;
+  vertical-align: middle;
+  overflow: hidden;
+  background: var(--surface-alt, #FAFAF5);
+}
+.detail-paused-mascot img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+
+/* Mascot decorator for the attempts history section header */
+.section-title-with-mascot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-title-mascot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-alt, #FAFAF5);
+  flex-shrink: 0;
+}
+.section-title-mascot img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+
+/* Mascot inside slip-confirm dialog */
+.slip-comfort-mascot {
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-alt, #FAFAF5);
+}
+.slip-comfort-mascot img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+
+/* Help tooltip mascot — used in onboarding hints and form help */
+.help-mascot-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+.help-mascot-inline .help-mascot-img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.help-mascot-inline .help-mascot-img img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+
+/* Confetti celebration mascot — appears with toast on big milestones */
+.celebrate-toast-mascot {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%) scale(0);
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: white;
+  overflow: hidden;
+  z-index: 80;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  animation: celebrate-pop 1.8s ease-out forwards;
+}
+.celebrate-toast-mascot img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+@keyframes celebrate-pop {
+  0% { transform: translateX(-50%) scale(0) rotate(-20deg); }
+  20% { transform: translateX(-50%) scale(1.15) rotate(10deg); }
+  35% { transform: translateX(-50%) scale(1) rotate(0deg); }
+  85% { transform: translateX(-50%) scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: translateX(-50%) scale(0.5) rotate(0deg); opacity: 0; }
+}
+
+/* ===== Attempts timeline (mini bar chart) ===== */
+.attempts-timeline {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--surface-alt, #FAFAF5);
+  border-radius: var(--radius-md, 10px);
+  min-height: 80px;
+}
+.timeline-bar {
+  flex: 1;
+  min-width: 8px;
+  background: var(--accent, #5BA856);
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: opacity 0.2s;
+  min-height: 4px;
+}
+.timeline-bar:hover { opacity: 0.7; }
+.timeline-bar.lapse { background: var(--danger, #E5484D); }
+.timeline-bar.manual { background: var(--warning, #FFB627); }
+.timeline-bar.current {
+  background: var(--accent, #5BA856);
+  box-shadow: 0 0 0 2px rgba(91, 168, 86, 0.3);
+}
+.timeline-bar-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text, #2A2D2A);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  margin-bottom: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.timeline-bar:hover .timeline-bar-tooltip {
+  opacity: 1;
+}
+.timeline-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+.timeline-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* Date picker styling for cost-change "from a specific date" */
+.cost-date-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--surface-alt, #FAFAF5);
+  border-radius: var(--radius-md, 10px);
+}
+.cost-date-picker input[type="date"] {
+  font-size: 1rem;
+  padding: 10px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border, #E8E5D8);
+  background: white;
+  font-family: inherit;
+}

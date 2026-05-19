@@ -72,9 +72,10 @@ TB.UI = (function () {
   }
 
   // Mascot HTML with emoji fallback (turtle for Tally)
+  // v0.003: files on GitHub Pages are .PNG (case-sensitive) — match exactly.
   function mascotHTML(variant) {
     variant = variant || 'hero';
-    const filename = 'mascot-' + variant + '.png';
+    const filename = 'mascot-' + variant + '.PNG';
     return '<img src="assets/mascot/' + filename + '" alt="Tally" ' +
            'onerror="this.outerHTML=\'<span style=\\\'font-size:0.85em\\\'>🐢</span>\'">';
   }

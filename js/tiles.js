@@ -34,9 +34,31 @@ TB.Tiles = (function () {
       : '';
     const iconStyle = tile.color ? 'background:' + hexToSoft(tile.color) + ';' : '';
 
+    // v0.003: mascot badges
+    // Goal-hit flag (build tiles that hit their daily goal today)
+    let goalFlagHtml = '';
+    if (!tile.system && tile.type === 'build' && tile.inputs && tile.inputs.dailyGoal) {
+      const todayCount = TB.Metrics.compute('count-today', tile, TB.Storage.getState()).rawValue;
+      if (todayCount >= tile.inputs.dailyGoal) {
+        goalFlagHtml = '<div class="tile-goal-flag" title="Daily goal hit!">' + TB.UI.mascotHTML('flag') + '</div>';
+      }
+    }
+    // Sleep indicator (any tile with no logs in 30+ days)
+    let sleepHtml = '';
+    if (!tile.system && !tile.paused) {
+      const logs = tile.logs || [];
+      const lastTime = logs.length > 0 ? logs[logs.length - 1].time : (tile.created || 0);
+      const daysSince = (Date.now() - lastTime) / 86400000;
+      if (daysSince > 30) {
+        sleepHtml = '<div class="tile-sleep-indicator" title="Tally is napping on this one — no activity in ' + Math.floor(daysSince) + ' days">' + TB.UI.mascotHTML('sleep') + '</div>';
+      }
+    }
+
     let html = '' +
       typeBadge +
       '<div class="tile-edit-handle" data-action="delete-tile">×</div>' +
+      goalFlagHtml +
+      sleepHtml +
       '<div class="tile-header">' +
       '  <div class="tile-icon" style="' + iconStyle + '">' + iconHtml + '</div>' +
       '  <div class="tile-name">' + TB.UI.escapeHtml(tile.name) + '</div>' +
@@ -111,7 +133,9 @@ TB.Tiles = (function () {
     if (tile.type === 'quit') {
       const streakDur = TB.Metrics.getStreakDuration(tile);
       const streakLabel = TB.Metrics.formatDays(streakDur);
+      const isLongStreak = streakDur > 7 * 86400000; // 7+ days = "long" — comfort mascot afterward
       TB.UI.confirm(
+        '<div class="slip-comfort-mascot">' + TB.UI.mascotHTML('encourage') + '</div>' +
         '<strong>Your current streak is ' + streakLabel + '.</strong><br><br>' +
         'Logging a slip will start a new attempt. Your previous streak is saved to history, ' +
         'and lifetime stats keep growing.<br><br>' +
@@ -120,6 +144,8 @@ TB.Tiles = (function () {
       ).then(ok => {
         if (ok) {
           TB.Storage.logTile(tileId, 'lapse');
+          // On long streaks show the comfort mascot briefly with the toast
+          if (isLongStreak) showComfortMascot();
           TB.UI.toast('New attempt started. You\'re back at day 1 — keep going.', 'warning', 3500);
           TB.Dashboard.refresh();
         }
@@ -153,15 +179,38 @@ TB.Tiles = (function () {
     if (newTotal === 1 || newTotal === 10 || newTotal === 50 || newTotal === 100 ||
         newTotal === 500 || newTotal === 1000 || (newTotal > 100 && newTotal % 500 === 0)) {
       TB.UI.confetti({ count: 30 });
+      showCelebrateMascot();
       TB.UI.toast('🎉 ' + newTotal + ' logged — nice work!', 'success', 2400);
     }
     if (tile.type === 'build' && tile.inputs && tile.inputs.dailyGoal) {
       const today = TB.Metrics.compute('count-today', tile).rawValue;
       if (today === tile.inputs.dailyGoal) {
         TB.UI.confetti({ count: 40 });
+        showCelebrateMascot();
         TB.UI.toast('🌟 Daily goal hit! Tally is proud.', 'success', 2800);
       }
     }
+  }
+
+  // v0.003: pop the celebrate mascot briefly on big wins
+  function showCelebrateMascot() {
+    // Don't stack multiple if one is already on screen
+    if (document.querySelector('.celebrate-toast-mascot')) return;
+    const el = document.createElement('div');
+    el.className = 'celebrate-toast-mascot';
+    el.innerHTML = TB.UI.mascotHTML('celebrate');
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2000);
+  }
+
+  // v0.003: comfort mascot after a long-streak slip
+  function showComfortMascot() {
+    if (document.querySelector('.celebrate-toast-mascot')) return;
+    const el = document.createElement('div');
+    el.className = 'celebrate-toast-mascot';
+    el.innerHTML = TB.UI.mascotHTML('comfort');
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2400);
   }
 
   function showFloatingFeedback(tileId, text) {
@@ -316,6 +365,12 @@ TB.Tiles = (function () {
       '        <div class="metric-toggle-desc">Past stats use ' + oldFmt + '. From now on, ' + newFmt + ' applies. Most accurate to reality.</div>' +
       '      </div>' +
       '    </div>' +
+      '    <div class="metric-toggle" data-cost-mode="from-date">' +
+      '      <div class="metric-toggle-info">' +
+      '        <div class="metric-toggle-label">From a specific date</div>' +
+      '        <div class="metric-toggle-desc">' + oldFmt + ' applies before that date, ' + newFmt + ' after. For correcting historical price changes.</div>' +
+      '      </div>' +
+      '    </div>' +
       '    <div class="metric-toggle" data-cost-mode="retro">' +
       '      <div class="metric-toggle-info">' +
       '        <div class="metric-toggle-label">Retroactively to everything</div>' +
@@ -329,15 +384,27 @@ TB.Tiles = (function () {
       '      </div>' +
       '    </div>' +
       '  </div>' +
+      '  <div id="tb-cost-date-picker" class="cost-date-picker" style="display:none;">' +
+      '    <label style="font-weight:600;font-size:0.85rem;">Effective from:</label>' +
+      '    <input type="date" id="tb-cost-effective-date" value="' + new Date().toISOString().slice(0,10) + '" max="' + new Date().toISOString().slice(0,10) + '">' +
+      '    <button class="btn btn-primary" id="tb-cost-date-confirm">Apply from this date</button>' +
+      '  </div>' +
       '</div>';
 
     const modal = TB.UI.openModal(html);
+
+    // Helper to apply the cost change and close
+    function applyAndClose(noteOverride) {
+      TB.Storage.updateTileWithAudit(existing.id, working, audit);
+      TB.UI.toast('Saved', 'success');
+      TB.UI.closeModal();
+      TB.Dashboard.refresh();
+    }
 
     modal.querySelectorAll('[data-cost-mode]').forEach(card => {
       card.addEventListener('click', () => {
         const mode = card.dataset.costMode;
         if (mode === 'cancel') {
-          // Revert costPerUnit to original
           working.inputs.costPerUnit = existing.inputs.costPerUnit;
           TB.Storage.updateTileWithAudit(existing.id, working, audit);
           TB.UI.toast('Cost reverted to ' + oldFmt, 'warning');
@@ -346,7 +413,6 @@ TB.Tiles = (function () {
           return;
         }
         if (mode === 'forward') {
-          // Build history with both segments
           const existingHistory = Array.isArray(existing.inputs.costPerUnit)
             ? existing.inputs.costPerUnit.slice()
             : (existing.inputs.costPerUnit != null
@@ -360,21 +426,67 @@ TB.Tiles = (function () {
             newValue: newFmt,
             note: 'Cost ' + direction + ' to ' + newFmt + ' going forward (' + oldFmt + ' applies to past data)'
           });
-        } else if (mode === 'retro') {
-          working.inputs.costPerUnit = newCost; // single number, applies to everything
+          applyAndClose();
+          return;
+        }
+        if (mode === 'retro') {
+          working.inputs.costPerUnit = newCost;
           audit.push({
             field: 'inputs.costPerUnit',
             oldValue: oldFmt,
             newValue: newFmt,
             note: 'Cost ' + direction + ' to ' + newFmt + ' retroactively'
           });
+          applyAndClose();
+          return;
         }
-        TB.Storage.updateTileWithAudit(existing.id, working, audit);
-        TB.UI.toast('Saved', 'success');
-        TB.UI.closeModal();
-        TB.Dashboard.refresh();
+        if (mode === 'from-date') {
+          // Reveal date picker, don't close
+          const picker = modal.querySelector('#tb-cost-date-picker');
+          picker.style.display = '';
+          modal.querySelectorAll('[data-cost-mode]').forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          picker.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
       });
     });
+
+    const dateBtn = modal.querySelector('#tb-cost-date-confirm');
+    if (dateBtn) {
+      dateBtn.addEventListener('click', () => {
+        const dateInput = modal.querySelector('#tb-cost-effective-date');
+        const dateStr = dateInput.value;
+        if (!dateStr) { TB.UI.toast('Pick a date first', 'warning'); return; }
+        const effectiveFrom = new Date(dateStr + 'T00:00:00').getTime();
+        if (isNaN(effectiveFrom)) { TB.UI.toast('Invalid date', 'warning'); return; }
+        const tileCreated = existing.created || 0;
+        if (effectiveFrom < tileCreated) {
+          // Date is before tile creation — equivalent to retroactive
+          working.inputs.costPerUnit = newCost;
+          audit.push({
+            field: 'inputs.costPerUnit',
+            oldValue: oldFmt,
+            newValue: newFmt,
+            note: 'Cost ' + direction + ' to ' + newFmt + ' (date before tile creation — applied retroactively)'
+          });
+        } else {
+          const existingHistory = Array.isArray(existing.inputs.costPerUnit)
+            ? existing.inputs.costPerUnit.slice()
+            : (existing.inputs.costPerUnit != null
+                ? [{ value: Number(existing.inputs.costPerUnit), effectiveFrom: existing.created || Date.now() }]
+                : []);
+          existingHistory.push({ value: newCost, effectiveFrom: effectiveFrom });
+          working.inputs.costPerUnit = existingHistory;
+          audit.push({
+            field: 'inputs.costPerUnit',
+            oldValue: oldFmt,
+            newValue: newFmt,
+            note: 'Cost ' + direction + ' to ' + newFmt + ' effective ' + new Date(effectiveFrom).toLocaleDateString()
+          });
+        }
+        applyAndClose();
+      });
+    }
   }
 
   function renderFormStep(working, isNew) {
@@ -788,8 +900,37 @@ TB.Tiles = (function () {
     let attemptsHTML = '';
     if (tile.type === 'quit' && tile.attempts && tile.attempts.length > 1) {
       const sorted = tile.attempts.slice().reverse();
+      // Compute max duration for bar scaling
+      const maxDur = Math.max.apply(null, tile.attempts.map(a => {
+        const end = a.endTime || Date.now();
+        return a.durationMs != null ? a.durationMs : Math.max(0, end - a.startTime);
+      }));
+      // Timeline (chronological, left = oldest, right = newest)
+      let timelineHTML = '<div class="attempts-timeline">';
+      tile.attempts.forEach((a, idx) => {
+        const isCurrent = a.endTime == null;
+        const end = a.endTime || Date.now();
+        const dur = a.durationMs != null ? a.durationMs : Math.max(0, end - a.startTime);
+        const pct = maxDur > 0 ? (dur / maxDur) * 100 : 0;
+        const cls = isCurrent ? 'current' : (a.closedBy === 'lapse' ? 'lapse' : 'manual');
+        const tooltip = '#' + (idx + 1) + ' · ' + TB.Metrics.formatDays(dur) + (isCurrent ? ' (in progress)' : '');
+        timelineHTML += '<div class="timeline-bar ' + cls + '" style="height:' + Math.max(4, pct) + '%;" title="' + TB.UI.escapeHtml(tooltip) + '">' +
+          '<div class="timeline-bar-tooltip">' + TB.UI.escapeHtml(tooltip) + '</div>' +
+          '</div>';
+      });
+      timelineHTML += '</div>' +
+        '<div class="timeline-legend">' +
+        '<span><span class="timeline-legend-dot" style="background:var(--accent,#5BA856);"></span>ended clean / in progress</span>' +
+        '<span><span class="timeline-legend-dot" style="background:var(--danger,#E5484D);"></span>slip</span>' +
+        '<span><span class="timeline-legend-dot" style="background:var(--warning,#FFB627);"></span>manual reset</span>' +
+        '</div>';
+
       attemptsHTML = '<div class="detail-section">' +
-        '<div class="detail-section-title">Attempts history</div>' +
+        '<div class="detail-section-title section-title-with-mascot">' +
+        '  <div class="section-title-mascot">' + TB.UI.mascotHTML('calendar') + '</div>' +
+        '  <span>Attempts history</span>' +
+        '</div>' +
+        timelineHTML +
         '<div class="attempts-list">';
       sorted.forEach((a, idx) => {
         const isCurrent = a.endTime == null;
@@ -867,7 +1008,9 @@ TB.Tiles = (function () {
       '<div class="modal-body">' +
       '  <div class="detail-hero">' +
       '    <div class="detail-hero-icon">' + iconHtml + '</div>' +
-      '    <div class="detail-hero-name">' + TB.UI.escapeHtml(tile.name) + '</div>' +
+      '    <div class="detail-hero-name">' + TB.UI.escapeHtml(tile.name) +
+      (tile.paused ? '<span class="detail-paused-mascot" title="This tracker is paused">' + TB.UI.mascotHTML('think') + '</span>' : '') +
+      '</div>' +
       '    <div class="detail-hero-type">' + (tile.type || 'tracker') + (tile.paused ? ' · paused' : '') + '</div>' +
       '  </div>' +
       metricsHTML +

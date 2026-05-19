@@ -185,6 +185,19 @@ TB.Dashboard = (function () {
         fab.setAttribute('aria-label', 'Add tile');
       }
     }
+    // v0.003: reflect state on the rearrange top-bar button
+    const rearrangeBtn = document.getElementById('rearrange-btn');
+    if (rearrangeBtn) {
+      if (on) {
+        rearrangeBtn.classList.add('active');
+        rearrangeBtn.innerHTML = '✓';
+        rearrangeBtn.setAttribute('aria-label', 'Done rearranging');
+      } else {
+        rearrangeBtn.classList.remove('active');
+        rearrangeBtn.innerHTML = '⇅';
+        rearrangeBtn.setAttribute('aria-label', 'Rearrange tiles');
+      }
+    }
     if (on) showEditBanner();
     else hideEditBanner();
   }
@@ -194,7 +207,9 @@ TB.Dashboard = (function () {
     const banner = document.createElement('div');
     banner.id = 'edit-banner';
     banner.className = 'edit-banner';
-    banner.textContent = 'Drag tiles to rearrange. Tap × to delete.';
+    banner.innerHTML =
+      '<div class="edit-banner-mascot">' + TB.UI.mascotHTML('point') + '</div>' +
+      '<span>Drag tiles to rearrange · Tap ⇅ when done</span>';
     document.body.appendChild(banner);
   }
 
