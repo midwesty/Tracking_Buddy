@@ -34,31 +34,9 @@ TB.Tiles = (function () {
       : '';
     const iconStyle = tile.color ? 'background:' + hexToSoft(tile.color) + ';' : '';
 
-    // v0.003: mascot badges
-    // Goal-hit flag (build tiles that hit their daily goal today)
-    let goalFlagHtml = '';
-    if (!tile.system && tile.type === 'build' && tile.inputs && tile.inputs.dailyGoal) {
-      const todayCount = TB.Metrics.compute('count-today', tile, TB.Storage.getState()).rawValue;
-      if (todayCount >= tile.inputs.dailyGoal) {
-        goalFlagHtml = '<div class="tile-goal-flag" title="Daily goal hit!">' + TB.UI.mascotHTML('flag') + '</div>';
-      }
-    }
-    // Sleep indicator (any tile with no logs in 30+ days)
-    let sleepHtml = '';
-    if (!tile.system && !tile.paused) {
-      const logs = tile.logs || [];
-      const lastTime = logs.length > 0 ? logs[logs.length - 1].time : (tile.created || 0);
-      const daysSince = (Date.now() - lastTime) / 86400000;
-      if (daysSince > 30) {
-        sleepHtml = '<div class="tile-sleep-indicator" title="Tally is napping on this one — no activity in ' + Math.floor(daysSince) + ' days">' + TB.UI.mascotHTML('sleep') + '</div>';
-      }
-    }
-
     let html = '' +
       typeBadge +
       '<div class="tile-edit-handle" data-action="delete-tile">×</div>' +
-      goalFlagHtml +
-      sleepHtml +
       '<div class="tile-header">' +
       '  <div class="tile-icon" style="' + iconStyle + '">' + iconHtml + '</div>' +
       '  <div class="tile-name">' + TB.UI.escapeHtml(tile.name) + '</div>' +
@@ -85,10 +63,34 @@ TB.Tiles = (function () {
     if (!tile.system) {
       const isQuit = tile.type === 'quit';
       const isEarn = tile.type === 'earn';
-      const label = isQuit ? '!' : (isEarn ? '$' : '+');
-      const cls = 'tile-quick-log' + (isQuit ? ' quit-mode' : '') + (isEarn ? ' earn-mode' : '');
-      const title = isQuit ? 'Log a slip' : (isEarn ? 'Log a sale' : 'Log one');
-      html += '<button class="' + cls + '" data-action="quick-log" aria-label="' + title + '">' + label + '</button>';
+      const hasTimer = tile.hasTimer === true;
+      const activeTimer = TB.Storage.getActiveTimer();
+      const timerRunningHere = activeTimer && activeTimer.tileId === tile.id;
+
+      // v0.004: Tally always appears above the action button with state-based expression
+      const tallyVariant = TB.Metrics.getTallyExpression(tile);
+      html += '<div class="tile-tally" data-variant="' + tallyVariant + '" title="Tally: ' + tallyVariant + '">' +
+        TB.UI.mascotHTML(tallyVariant) +
+        '</div>';
+
+      // Action button: timer / quit-slip / earn-amount / generic +
+      if (hasTimer) {
+        if (timerRunningHere) {
+          // Live running display — clicking stops the timer
+          const elapsedMs = Date.now() - activeTimer.startedAt;
+          const elapsedStr = TB.Metrics.formatDuration(elapsedMs);
+          html += '<button class="tile-quick-log timer-mode running" data-action="quick-log" aria-label="Stop timer" data-timer-running="1">' +
+            '<span class="timer-icon">⏸</span><span class="timer-elapsed" data-elapsed-start="' + activeTimer.startedAt + '">' + elapsedStr + '</span>' +
+            '</button>';
+        } else {
+          html += '<button class="tile-quick-log timer-mode" data-action="quick-log" aria-label="Start timer">▶</button>';
+        }
+      } else {
+        const label = isQuit ? '!' : (isEarn ? '$' : '+');
+        const cls = 'tile-quick-log' + (isQuit ? ' quit-mode' : '') + (isEarn ? ' earn-mode' : '');
+        const title = isQuit ? 'Log a slip' : (isEarn ? 'Log a sale' : 'Log one');
+        html += '<button class="' + cls + '" data-action="quick-log" aria-label="' + title + '">' + label + '</button>';
+      }
     }
 
     el.innerHTML = html;
@@ -130,10 +132,11 @@ TB.Tiles = (function () {
     const tile = TB.Storage.getTile(tileId);
     if (!tile) return;
 
+    // ---- Quit tile: confirm slip ----
     if (tile.type === 'quit') {
       const streakDur = TB.Metrics.getStreakDuration(tile);
       const streakLabel = TB.Metrics.formatDays(streakDur);
-      const isLongStreak = streakDur > 7 * 86400000; // 7+ days = "long" — comfort mascot afterward
+      const isLongStreak = streakDur > 7 * 86400000;
       TB.UI.confirm(
         '<div class="slip-comfort-mascot">' + TB.UI.mascotHTML('encourage') + '</div>' +
         '<strong>Your current streak is ' + streakLabel + '.</strong><br><br>' +
@@ -144,32 +147,176 @@ TB.Tiles = (function () {
       ).then(ok => {
         if (ok) {
           TB.Storage.logTile(tileId, 'lapse');
-          // On long streaks show the comfort mascot briefly with the toast
           if (isLongStreak) showComfortMascot();
           TB.UI.toast('New attempt started. You\'re back at day 1 — keep going.', 'warning', 3500);
           TB.Dashboard.refresh();
         }
       });
-    } else if (tile.type === 'earn') {
-      // Prompt for amount
-      TB.UI.prompt('Sale amount ($)', '', { title: 'Log a sale', confirmText: 'Log' }).then(val => {
-        if (!val) return;
-        const amount = parseFloat(val);
-        if (isNaN(amount) || amount < 0) {
-          TB.UI.toast('Enter a valid amount', 'warning');
-          return;
-        }
-        TB.Storage.logTile(tileId, 'log', { amount: amount });
-        showFloatingFeedback(tileId, '+$' + amount.toFixed(2));
-        refreshTileMetrics(tileId);
-        celebrateIfMilestone(tileId);
-      });
-    } else {
+      return;
+    }
+
+    // ---- Timer-enabled tile ----
+    if (tile.hasTimer === true) {
+      const active = TB.Storage.getActiveTimer();
+      if (active && active.tileId === tileId) {
+        // Stop & log
+        const elapsedMs = Date.now() - active.startedAt;
+        TB.Storage.stopTimer();
+        openLogDetailsPrompt(tile, { durationMs: elapsedMs }, () => {
+          // refresh handled inside
+        });
+        return;
+      }
+      if (active && active.tileId !== tileId) {
+        // Another timer is running — ask to stop it first
+        const otherTile = TB.Storage.getTile(active.tileId);
+        const otherName = otherTile ? otherTile.name : 'another tracker';
+        TB.UI.confirm(
+          'A timer is already running on <strong>' + TB.UI.escapeHtml(otherName) + '</strong>. ' +
+          'Stop it and log it, then start this one?',
+          { title: 'Switch timers?', confirmText: 'Stop & switch' }
+        ).then(ok => {
+          if (!ok) return;
+          if (otherTile) {
+            const otherElapsed = Date.now() - active.startedAt;
+            TB.Storage.stopTimer();
+            openLogDetailsPrompt(otherTile, { durationMs: otherElapsed }, () => {
+              // After logging the other one, start this one
+              TB.Storage.startTimer(tileId);
+              TB.UI.toast('Timer started for ' + tile.name, 'success', 1500);
+              TB.Dashboard.refresh();
+            });
+          } else {
+            TB.Storage.startTimer(tileId);
+            TB.UI.toast('Timer started for ' + tile.name, 'success', 1500);
+            TB.Dashboard.refresh();
+          }
+        });
+        return;
+      }
+      // No active timer — start one
+      TB.Storage.startTimer(tileId);
+      if (navigator.vibrate) navigator.vibrate(15);
+      TB.UI.toast('Timer started — tap ⏸ to stop', 'success', 1800);
+      TB.Dashboard.refresh();
+      return;
+    }
+
+    // ---- Earn tile ----
+    if (tile.type === 'earn') {
+      const schema = (tile.logSchema || []);
+      if (schema.length === 0) {
+        // Simple amount prompt — preserve original v0.002 behavior
+        TB.UI.prompt('Sale amount ($)', '', { title: 'Log a sale', confirmText: 'Log' }).then(val => {
+          if (!val) return;
+          const amount = parseFloat(val);
+          if (isNaN(amount) || amount < 0) { TB.UI.toast('Enter a valid amount', 'warning'); return; }
+          TB.Storage.logTile(tileId, 'log', { amount: amount });
+          showFloatingFeedback(tileId, '+$' + amount.toFixed(2));
+          refreshTileMetrics(tileId);
+          celebrateIfMilestone(tileId);
+          TB.Dashboard.refresh();
+        });
+      } else {
+        // Multi-field prompt with amount + custom schema
+        openLogDetailsPrompt(tile, { askAmount: true }, () => {});
+      }
+      return;
+    }
+
+    // ---- Default: build / observe / neutral ----
+    const schema = (tile.logSchema || []);
+    if (schema.length === 0) {
+      // Simple +1
       TB.Storage.logTile(tileId, 'log');
       showFloatingFeedback(tileId, '+1');
       refreshTileMetrics(tileId);
       celebrateIfMilestone(tileId);
+    } else {
+      openLogDetailsPrompt(tile, {}, () => {});
     }
+  }
+
+  // v0.004: prompt the user for log details based on tile.logSchema (+ duration/amount if relevant)
+  // options: { durationMs, askAmount }
+  // onComplete: callback after successful log
+  function openLogDetailsPrompt(tile, options, onComplete) {
+    options = options || {};
+    const schema = tile.logSchema || [];
+    const durationMs = options.durationMs;
+    const askAmount = options.askAmount === true;
+
+    let html = '<div class="modal-header"><h2>Log details</h2><button class="modal-close" data-close-modal>×</button></div>' +
+      '<div class="modal-body">';
+
+    if (durationMs != null) {
+      html += '<div class="field"><label>Duration</label>' +
+        '<div class="log-duration-display">' + TB.Metrics.formatDuration(durationMs) + '</div></div>';
+    }
+    if (askAmount) {
+      html += '<div class="field"><label>Amount ($)</label>' +
+        '<input type="number" step="0.01" id="tb-log-amount" placeholder="e.g. 45.00"></div>';
+    }
+    schema.forEach((field, i) => {
+      const inputType = field.type === 'number' ? 'number' : 'text';
+      const step = field.type === 'number' ? 'step="any"' : '';
+      const ph = field.label || field.key;
+      html += '<div class="field"><label>' + TB.UI.escapeHtml(field.label || field.key) +
+        (field.required ? ' <span style="color:var(--danger,#E5484D);">*</span>' : '') +
+        '</label>' +
+        '<input type="' + inputType + '" ' + step + ' data-schema-key="' + TB.UI.escapeHtml(field.key) + '" placeholder="' + TB.UI.escapeHtml(ph) + '"></div>';
+    });
+    html += '<div class="field"><label>Note (optional)</label>' +
+      '<input type="text" id="tb-log-note" placeholder="Anything to remember?"></div>';
+    html += '</div>' +
+      '<div class="modal-footer">' +
+      '  <button class="btn btn-secondary" data-close-modal>Cancel</button>' +
+      '  <button class="btn btn-primary" id="tb-log-save">Log it</button>' +
+      '</div>';
+
+    const modal = TB.UI.openModal(html);
+    const saveBtn = modal.querySelector('#tb-log-save');
+    saveBtn.addEventListener('click', () => {
+      const logOptions = {};
+      if (durationMs != null) logOptions.durationMs = durationMs;
+      if (askAmount) {
+        const a = modal.querySelector('#tb-log-amount').value;
+        if (a !== '') {
+          const num = parseFloat(a);
+          if (!isNaN(num) && num >= 0) logOptions.amount = num;
+          else { TB.UI.toast('Enter a valid amount', 'warning'); return; }
+        } else {
+          TB.UI.toast('Amount required', 'warning'); return;
+        }
+      }
+      const fields = {};
+      let missingRequired = null;
+      schema.forEach(f => {
+        const input = modal.querySelector('[data-schema-key="' + f.key + '"]');
+        if (!input) return;
+        const v = input.value;
+        if (f.required && (v == null || v === '')) { missingRequired = f.label || f.key; return; }
+        if (v === '') return;
+        if (f.type === 'number') fields[f.key] = parseFloat(v);
+        else fields[f.key] = v;
+      });
+      if (missingRequired) { TB.UI.toast('Please fill in: ' + missingRequired, 'warning'); return; }
+      const noteInput = modal.querySelector('#tb-log-note');
+      if (noteInput && noteInput.value) logOptions.note = noteInput.value;
+      logOptions.fields = fields;
+
+      TB.Storage.logTile(tile.id, 'log', logOptions);
+      let feedbackText = '+1';
+      if (durationMs != null) feedbackText = TB.Metrics.formatDuration(durationMs, { compact: true });
+      else if (logOptions.amount != null) feedbackText = '+$' + logOptions.amount.toFixed(2);
+      showFloatingFeedback(tile.id, feedbackText);
+      refreshTileMetrics(tile.id);
+      celebrateIfMilestone(tile.id);
+      TB.UI.toast('Logged', 'success', 1200);
+      TB.UI.closeModal();
+      TB.Dashboard.refresh();
+      if (onComplete) onComplete();
+    });
   }
 
   function celebrateIfMilestone(tileId) {
@@ -188,6 +335,18 @@ TB.Tiles = (function () {
         TB.UI.confetti({ count: 40 });
         showCelebrateMascot();
         TB.UI.toast('🌟 Daily goal hit! Tally is proud.', 'success', 2800);
+      }
+    }
+    // v0.004: yearly earnings goal hit (earn tiles)
+    if (tile.type === 'earn' && tile.inputs && tile.inputs.yearlyTarget) {
+      const total = TB.Metrics.compute('total-earned', tile).rawValue;
+      const target = Number(tile.inputs.yearlyTarget);
+      // Trigger when crossing the target (avoid celebrating every log after)
+      const prevTotal = total - (tile.logs && tile.logs.length > 0 ? Number(tile.logs[tile.logs.length-1].amount || 0) : 0);
+      if (prevTotal < target && total >= target) {
+        TB.UI.confetti({ count: 60 });
+        showCelebrateMascot();
+        TB.UI.toast('🏆 Yearly goal hit! That\'s incredible.', 'success', 3500);
       }
     }
   }
@@ -252,8 +411,12 @@ TB.Tiles = (function () {
       : {
         name: '', type: 'neutral', iconId: 'star', customIcon: null, color: null,
         shape: 'square', unitName: 'thing', unitNamePlural: 'things',
-        inputs: {}, faceMetrics: []
+        inputs: {}, faceMetrics: [],
+        hasTimer: false, logSchema: []
       };
+    // v0.004 safety: ensure fields exist when editing pre-v0.004 tiles
+    if (working.hasTimer === undefined) working.hasTimer = false;
+    if (!Array.isArray(working.logSchema)) working.logSchema = [];
 
     // Snapshot original cost-per-unit for retroactive diff
     const originalCostPerUnit = existing ? extractCurrentCost(existing) : null;
@@ -327,7 +490,7 @@ TB.Tiles = (function () {
 
   function diffForAudit(oldTile, newTile) {
     const entries = [];
-    const interesting = ['name', 'type', 'iconId', 'shape', 'unitName', 'unitNamePlural', 'color'];
+    const interesting = ['name', 'type', 'iconId', 'shape', 'unitName', 'unitNamePlural', 'color', 'hasTimer'];
     interesting.forEach(key => {
       if (oldTile[key] !== newTile[key]) {
         entries.push({ field: key, oldValue: oldTile[key], newValue: newTile[key], note: 'Changed ' + key });
@@ -345,6 +508,10 @@ TB.Tiles = (function () {
     // Metric face changes
     if (JSON.stringify(oldTile.faceMetrics) !== JSON.stringify(newTile.faceMetrics)) {
       entries.push({ field: 'faceMetrics', oldValue: oldTile.faceMetrics, newValue: newTile.faceMetrics, note: 'Changed displayed metrics' });
+    }
+    // v0.004: log schema changes
+    if (JSON.stringify(oldTile.logSchema || []) !== JSON.stringify(newTile.logSchema || [])) {
+      entries.push({ field: 'logSchema', oldValue: oldTile.logSchema, newValue: newTile.logSchema, note: 'Changed custom log fields' });
     }
     return entries;
   }
@@ -550,6 +717,26 @@ TB.Tiles = (function () {
         '</div>';
     }
 
+    // ---- v0.004: Live timer toggle (not for quit) ----
+    if (working.type !== 'quit') {
+      const timerOn = working.hasTimer === true;
+      html += '<div class="field"><label>Live timer</label>' +
+        '<div class="metric-toggle ' + (timerOn ? 'active' : '') + '" id="tb-timer-toggle" style="cursor:pointer;">' +
+        '  <div class="metric-toggle-info">' +
+        '    <div class="metric-toggle-label">' + (timerOn ? '⏱ Timer enabled' : '⏱ Enable live timer') + '</div>' +
+        '    <div class="metric-toggle-desc">Replace the + button with a start/stop stopwatch. Great for meditation, workouts, reading sessions, focus blocks.</div>' +
+        '  </div>' +
+        '  <div class="face-star">' + (timerOn ? '✓' : '○') + '</div>' +
+        '</div></div>';
+    }
+
+    // ---- v0.004: Custom log fields editor ----
+    html += '<div class="field"><label>Custom log fields <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label>' +
+      '<div class="field-help">Each time you log, you can be prompted for these. Useful for tracking extras like pages read, intensity, or notes about a sale.</div>' +
+      '<div id="tb-log-schema-list">' + renderLogSchemaList(working) + '</div>' +
+      '<button type="button" class="btn btn-secondary" id="tb-add-schema-field" style="margin-top:8px;">+ Add a field</button>' +
+      '</div>';
+
     html += '<div class="field"><label>Show on tile face <span style="font-weight:400;color:var(--text-muted);">(tap ⭐ to add — max ' + shapeCapacity(working.shape || 'square') + ' for ' + (working.shape || 'square') + ' tiles)</span></label>' +
       '<div class="metric-list" id="tb-metric-list"></div>' +
       '</div>';
@@ -563,6 +750,26 @@ TB.Tiles = (function () {
       '</div></div>';
 
     return html;
+  }
+
+  function renderLogSchemaList(working) {
+    const schema = working.logSchema || [];
+    if (schema.length === 0) {
+      return '<div style="color:var(--text-muted); font-size:0.85rem; padding:8px 0;">No custom fields. Add one to track extra info with each log.</div>';
+    }
+    let h = '';
+    schema.forEach((f, i) => {
+      h += '<div class="schema-field-row" data-schema-index="' + i + '">' +
+        '  <input type="text" class="schema-label-input" placeholder="Field name (e.g. pages)" value="' + TB.UI.escapeHtml(f.label || '') + '">' +
+        '  <select class="schema-type-input">' +
+        '    <option value="number"' + (f.type === 'number' ? ' selected' : '') + '>Number</option>' +
+        '    <option value="text"' + (f.type === 'text' ? ' selected' : '') + '>Text</option>' +
+        '  </select>' +
+        '  <label class="schema-required"><input type="checkbox" class="schema-required-input" ' + (f.required ? 'checked' : '') + '> required</label>' +
+        '  <button type="button" class="schema-remove-btn" data-remove-index="' + i + '" title="Remove">×</button>' +
+        '</div>';
+    });
+    return h;
   }
 
   function renderOptionalDetails(working) {
@@ -626,6 +833,9 @@ TB.Tiles = (function () {
           working.unitNamePlural = preset.unitNamePlural;
           working.inputs = JSON.parse(JSON.stringify(preset.suggestedInputs || {}));
           working.faceMetrics = (preset.defaultMetrics || []).slice();
+          // v0.004: copy timer + schema from preset
+          working.hasTimer = preset.hasTimer === true;
+          working.logSchema = Array.isArray(preset.logSchema) ? JSON.parse(JSON.stringify(preset.logSchema)) : [];
           const body = modal.querySelector('#tb-form-body');
           body.innerHTML = renderFormStep(working, isNew);
           wireFormHandlers(modal, working, isNew);
@@ -720,12 +930,34 @@ TB.Tiles = (function () {
 
     renderMetricList(modal, working);
 
+    // v0.004: timer toggle
+    const timerToggle = modal.querySelector('#tb-timer-toggle');
+    if (timerToggle) {
+      timerToggle.addEventListener('click', () => {
+        working.hasTimer = !working.hasTimer;
+        // Re-render the toggle visual
+        const labelEl = timerToggle.querySelector('.metric-toggle-label');
+        const starEl = timerToggle.querySelector('.face-star');
+        if (working.hasTimer) {
+          timerToggle.classList.add('active');
+          if (labelEl) labelEl.textContent = '⏱ Timer enabled';
+          if (starEl) starEl.textContent = '✓';
+        } else {
+          timerToggle.classList.remove('active');
+          if (labelEl) labelEl.textContent = '⏱ Enable live timer';
+          if (starEl) starEl.textContent = '○';
+        }
+      });
+    }
+
+    // v0.004: schema field handlers
+    wireSchemaHandlers(modal, working);
+
     modal.querySelectorAll('[data-shape]').forEach(p => {
       p.addEventListener('click', () => {
         modal.querySelectorAll('[data-shape]').forEach(c => c.classList.remove('active'));
         p.classList.add('active');
         working.shape = p.dataset.shape;
-        // Trim faceMetrics if shape capacity decreased
         const cap = shapeCapacity(working.shape);
         if (working.faceMetrics.length > cap) {
           working.faceMetrics = working.faceMetrics.slice(0, cap);
@@ -734,6 +966,56 @@ TB.Tiles = (function () {
         }
       });
     });
+  }
+
+  function wireSchemaHandlers(modal, working) {
+    const list = modal.querySelector('#tb-log-schema-list');
+    const addBtn = modal.querySelector('#tb-add-schema-field');
+    if (!list || !addBtn) return;
+
+    function rerender() {
+      list.innerHTML = renderLogSchemaList(working);
+      attachRowHandlers();
+    }
+    function attachRowHandlers() {
+      list.querySelectorAll('.schema-field-row').forEach(row => {
+        const idx = parseInt(row.dataset.schemaIndex, 10);
+        const labelInput = row.querySelector('.schema-label-input');
+        const typeInput = row.querySelector('.schema-type-input');
+        const reqInput = row.querySelector('.schema-required-input');
+        const removeBtn = row.querySelector('.schema-remove-btn');
+        if (labelInput) {
+          labelInput.addEventListener('input', e => {
+            const v = e.target.value;
+            working.logSchema[idx].label = v;
+            // Auto-generate key from label (camelCase, alphanumeric only)
+            working.logSchema[idx].key = v.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'field' + idx;
+          });
+        }
+        if (typeInput) {
+          typeInput.addEventListener('change', e => {
+            working.logSchema[idx].type = e.target.value;
+          });
+        }
+        if (reqInput) {
+          reqInput.addEventListener('change', e => {
+            working.logSchema[idx].required = e.target.checked;
+          });
+        }
+        if (removeBtn) {
+          removeBtn.addEventListener('click', () => {
+            working.logSchema.splice(idx, 1);
+            rerender();
+          });
+        }
+      });
+    }
+    addBtn.addEventListener('click', () => {
+      if (!Array.isArray(working.logSchema)) working.logSchema = [];
+      working.logSchema.push({ key: 'field' + working.logSchema.length, label: '', type: 'text', required: false });
+      rerender();
+    });
+    attachRowHandlers();
   }
 
   function renderIconPicker(modal, working) {
@@ -776,15 +1058,66 @@ TB.Tiles = (function () {
       upload.addEventListener('change', e => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
-        if (file.size > 800000) { TB.UI.toast('Image too large — pick one under 800KB', 'warning'); return; }
-        const reader = new FileReader();
-        reader.onload = ev => {
-          working.customIcon = ev.target.result;
+        // v0.004: raise limit (we'll downscale anyway). 10MB original ceiling.
+        if (file.size > 10 * 1024 * 1024) {
+          TB.UI.toast('Image too large — pick one under 10MB', 'warning');
+          return;
+        }
+        if (!file.type.startsWith('image/')) {
+          TB.UI.toast('That doesn\'t look like an image', 'warning');
+          return;
+        }
+        TB.UI.toast('Resizing image…', 'success', 1000);
+        resizeImageToDataURL(file, 256, 0.85).then(dataUrl => {
+          working.customIcon = dataUrl;
           renderIconPicker(modal, working);
-        };
-        reader.readAsDataURL(file);
+        }).catch(err => {
+          console.error('Image resize failed:', err);
+          // Fallback: use the original if resize fails
+          const reader = new FileReader();
+          reader.onload = ev => {
+            working.customIcon = ev.target.result;
+            renderIconPicker(modal, working);
+          };
+          reader.readAsDataURL(file);
+        });
       });
     }
+  }
+
+  // v0.004: client-side image resize via canvas. Returns JPEG dataURL ~ targetPx square.
+  function resizeImageToDataURL(file, targetPx, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const srcW = img.naturalWidth;
+            const srcH = img.naturalHeight;
+            if (!srcW || !srcH) { reject(new Error('Invalid image dimensions')); return; }
+            // Center-crop to square
+            const side = Math.min(srcW, srcH);
+            const sx = (srcW - side) / 2;
+            const sy = (srcH - side) / 2;
+            const canvas = document.createElement('canvas');
+            canvas.width = targetPx;
+            canvas.height = targetPx;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, sx, sy, side, side, 0, 0, targetPx, targetPx);
+            const out = canvas.toDataURL('image/jpeg', quality || 0.85);
+            resolve(out);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = () => reject(new Error('Image load failed'));
+        img.src = ev.target.result;
+      };
+      reader.onerror = () => reject(new Error('File read failed'));
+      reader.readAsDataURL(file);
+    });
   }
 
   function renderMetricList(modal, working) {
@@ -882,15 +1215,32 @@ TB.Tiles = (function () {
     if (logs.length === 0) {
       historyHTML = '<div class="history-empty">No history yet. Tap the corner button on the tile to log your first one.</div>';
     } else {
+      const schemaKeys = (tile.logSchema || []).map(s => s.key);
+      const schemaLabels = {};
+      (tile.logSchema || []).forEach(s => { schemaLabels[s.key] = s.label || s.key; });
       for (const l of logs) {
         const tagClass = l.type === 'lapse' ? 'lapse' : 'log';
         let tagText;
         if (l.type === 'lapse') tagText = 'Slip';
+        else if (l.durationMs != null) tagText = TB.Metrics.formatDuration(l.durationMs, { compact: true });
         else if (l.amount != null) tagText = '$' + Number(l.amount).toFixed(2);
         else tagText = '+' + (l.count || 1);
+
+        // Build extra-fields chip list
+        let extrasHTML = '';
+        schemaKeys.forEach(k => {
+          if (l[k] != null && l[k] !== '') {
+            extrasHTML += '<span class="log-extra"><strong>' + TB.UI.escapeHtml(schemaLabels[k]) + ':</strong> ' + TB.UI.escapeHtml(String(l[k])) + '</span>';
+          }
+        });
+        if (l.note) {
+          extrasHTML += '<span class="log-extra log-note-extra">"' + TB.UI.escapeHtml(l.note) + '"</span>';
+        }
+
         historyHTML += '<div class="history-item">' +
           '  <span class="history-item-tag ' + tagClass + '">' + tagText + '</span>' +
-          '  <span>' + TB.UI.formatTime(l.time) + '</span>' +
+          '  <span class="history-item-time">' + TB.UI.formatTime(l.time) + '</span>' +
+          (extrasHTML ? '  <div class="history-item-extras">' + extrasHTML + '</div>' : '') +
           '  <button class="history-delete" data-log-time="' + l.time + '" title="Delete">×</button>' +
           '</div>';
       }

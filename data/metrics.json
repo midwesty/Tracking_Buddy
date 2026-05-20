@@ -300,6 +300,76 @@
       "format": "currency",
       "live": false,
       "defaultOnFace": false
+    },
+    {
+      "id": "yearly-goal-progress",
+      "label": "Yearly goal progress",
+      "description": "Progress toward your yearly earnings goal",
+      "needsInputs": ["yearlyTarget"],
+      "appliesTo": ["earn"],
+      "format": "percent",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "total-time-logged",
+      "label": "Total time logged",
+      "description": "Sum of all timed session durations",
+      "needsInputs": [],
+      "appliesTo": ["build", "observe", "neutral"],
+      "format": "duration",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "avg-session-length",
+      "label": "Average session",
+      "description": "Mean duration of timed sessions",
+      "needsInputs": [],
+      "appliesTo": ["build", "observe", "neutral"],
+      "format": "duration",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "longest-session",
+      "label": "Longest session",
+      "description": "Your longest timed session ever",
+      "needsInputs": [],
+      "appliesTo": ["build", "observe", "neutral"],
+      "format": "duration",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "time-today",
+      "label": "Time today",
+      "description": "Total tracked time today",
+      "needsInputs": [],
+      "appliesTo": ["build", "observe", "neutral"],
+      "format": "duration",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "time-week",
+      "label": "Time this week",
+      "description": "Total tracked time this week",
+      "needsInputs": [],
+      "appliesTo": ["build", "observe", "neutral"],
+      "format": "duration",
+      "live": false,
+      "defaultOnFace": false
+    },
+    {
+      "id": "sessions-count",
+      "label": "Sessions logged",
+      "description": "Number of timed sessions",
+      "needsInputs": [],
+      "appliesTo": ["build", "observe", "neutral"],
+      "format": "count",
+      "live": false,
+      "defaultOnFace": false
     }
   ]
 }

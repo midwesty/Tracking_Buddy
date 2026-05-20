@@ -7,7 +7,7 @@ var TB = window.TB = window.TB || {};
 
 TB.Storage = (function () {
   const STORAGE_KEY = 'trackingBuddy.v1';
-  const APP_VERSION = '0.003';
+  const APP_VERSION = '0.004';
 
   function makeDefaultState() {
     const now = Date.now();
@@ -31,7 +31,9 @@ TB.Storage = (function () {
       },
       activeDashboardId: defaultDashboardId,
       dashboards: [{ id: defaultDashboardId, name: 'My Dashboard', created: now, order: [] }],
-      tiles: {}
+      tiles: {},
+      // v0.004: at most one timer can be running at a time. {tileId, startedAt} or null
+      activeTimer: null
     };
   }
 
@@ -125,6 +127,16 @@ TB.Storage = (function () {
     if (compareVersion(state.version, '0.003') < 0) {
       state.version = '0.003';
     }
+
+    // v0.003 → v0.004: add hasTimer and logSchema fields to tiles, activeTimer to state
+    if (compareVersion(state.version, '0.004') < 0) {
+      if (state.activeTimer === undefined) state.activeTimer = null;
+      Object.values(state.tiles).forEach(tile => {
+        if (tile.hasTimer === undefined) tile.hasTimer = false;
+        if (!Array.isArray(tile.logSchema)) tile.logSchema = [];
+      });
+      state.version = '0.004';
+    }
   }
 
   function save() {
@@ -201,6 +213,9 @@ TB.Storage = (function () {
       unitNamePlural: tile.unitNamePlural || 'things',
       inputs: tile.inputs || {},
       faceMetrics: tile.faceMetrics || ['time-since', 'total-count'],
+      // v0.004: timer + custom log schema
+      hasTimer: tile.hasTimer === true,
+      logSchema: Array.isArray(tile.logSchema) ? tile.logSchema : [],
       paused: false,
       pausedAt: null,
       pauseDuration: 0,
@@ -309,6 +324,8 @@ TB.Storage = (function () {
   }
 
   // ========== Logs ==========
+  // v0.004: log entry can carry arbitrary fields defined by tile.logSchema
+  // options: { count, amount, durationMs, note, fields } — `fields` is an object of schema-defined extras
   function logTile(tileId, type, options) {
     options = options || {};
     const tile = state.tiles[tileId];
@@ -320,6 +337,14 @@ TB.Storage = (function () {
       note: options.note || ''
     };
     if (options.amount != null) entry.amount = Number(options.amount);
+    if (options.durationMs != null) entry.durationMs = Number(options.durationMs);
+    // Carry schema-defined custom fields verbatim
+    if (options.fields && typeof options.fields === 'object') {
+      Object.keys(options.fields).forEach(k => {
+        if (k === 'count' || k === 'amount' || k === 'durationMs' || k === 'note' || k === 'time' || k === 'type') return;
+        entry[k] = options.fields[k];
+      });
+    }
     tile.logs.push(entry);
 
     const currentAttempt = getCurrentAttempt(tile);
@@ -416,6 +441,29 @@ TB.Storage = (function () {
     save();
   }
 
+  // ========== Timer (v0.004) ==========
+  // At most one timer runs at a time. Persists across reloads via localStorage.
+  function startTimer(tileId) {
+    if (!state.tiles[tileId]) return null;
+    state.activeTimer = { tileId: tileId, startedAt: Date.now() };
+    save();
+    return state.activeTimer;
+  }
+  function getActiveTimer() { return state.activeTimer || null; }
+  function cancelTimer() {
+    state.activeTimer = null;
+    save();
+  }
+  // Stops the timer and returns the elapsed duration in ms. Does NOT log — caller decides.
+  function stopTimer() {
+    const t = state.activeTimer;
+    if (!t) return 0;
+    const elapsed = Date.now() - t.startedAt;
+    state.activeTimer = null;
+    save();
+    return elapsed;
+  }
+
   // ========== Cost history ==========
   // costPerUnit may be a number, or an array of {value, effectiveFrom} entries.
   // Returns the rate effective at a given timestamp.
@@ -471,6 +519,7 @@ TB.Storage = (function () {
     pauseTile, resumeTile, resetStreak,
     getCurrentAttempt, closeCurrentAttempt,
     getCostPerUnitAt,
+    startTimer, stopTimer, cancelTimer, getActiveTimer,
     exportData, importData, clearAll
   };
 })();

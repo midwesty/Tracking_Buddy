@@ -101,7 +101,11 @@
       "suggestedInputs": {
         "dailyGoal": 1
       },
-      "defaultMetrics": ["count-today", "count-week", "current-streak"]
+      "hasTimer": true,
+      "logSchema": [
+        { "key": "intensity", "label": "Intensity", "type": "text", "required": false }
+      ],
+      "defaultMetrics": ["count-today", "time-today", "current-streak", "total-time-logged"]
     },
     {
       "id": "preset-meditation",
@@ -115,7 +119,9 @@
         "dailyGoal": 1,
         "timePerUnitMinutes": 10
       },
-      "defaultMetrics": ["count-today", "current-streak", "longest-streak"]
+      "hasTimer": true,
+      "logSchema": [],
+      "defaultMetrics": ["count-today", "time-today", "current-streak", "avg-session-length"]
     },
     {
       "id": "preset-reading",
@@ -128,7 +134,11 @@
       "suggestedInputs": {
         "dailyGoal": 20
       },
-      "defaultMetrics": ["count-today", "count-week", "total-count"]
+      "hasTimer": true,
+      "logSchema": [
+        { "key": "pages", "label": "Pages read", "type": "number", "required": false }
+      ],
+      "defaultMetrics": ["count-today", "time-today", "total-count", "longest-session"]
     },
     {
       "id": "preset-bees",

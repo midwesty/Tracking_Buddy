@@ -1550,3 +1550,174 @@
   background: white;
   font-family: inherit;
 }
+
+/* ===================================================================
+   v0.004 additions: permanent Tally, timer button, schema editor,
+   schema-rich activity rendering, log details prompt
+   =================================================================== */
+
+/* Permanent Tally avatar above the action button (bottom-right corner) */
+.tile-tally {
+  position: absolute;
+  bottom: 64px;            /* sits above the 44px quick-log button + spacing */
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface, white);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  z-index: 2;
+  pointer-events: none;     /* never blocks taps on the button below */
+  transition: transform 0.2s;
+}
+.tile-tally img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.tile-tally[data-variant="celebrate"],
+.tile-tally[data-variant="flag"] {
+  animation: tally-bob 1.6s ease-in-out infinite;
+}
+.tile-tally[data-variant="sleep"] {
+  opacity: 0.85;
+}
+@keyframes tally-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+/* On wide tiles the tally still sits above the action button — same position works */
+.tile.shape-wide .tile-tally,
+.tile.shape-large .tile-tally {
+  bottom: 64px;
+  right: 14px;
+}
+
+/* Timer button — replaces quick-log when hasTimer is on */
+.tile-quick-log.timer-mode {
+  background: var(--accent, #5BA856);
+  box-shadow: 0 3px 0 #3F8A3D, 0 4px 12px rgba(0,0,0,0.12);
+  font-size: 1.4rem;
+}
+.tile-quick-log.timer-mode.running {
+  width: auto;
+  min-width: 44px;
+  padding: 0 12px;
+  height: 44px;
+  border-radius: 22px;
+  background: var(--danger, #E5484D);
+  box-shadow: 0 3px 0 #B33135, 0 4px 12px rgba(0,0,0,0.18);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  animation: timer-pulse 1.6s ease-in-out infinite;
+}
+.tile-quick-log.timer-mode.running .timer-icon {
+  font-size: 1rem;
+}
+.tile-quick-log.timer-mode.running .timer-elapsed {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+@keyframes timer-pulse {
+  0%, 100% { box-shadow: 0 3px 0 #B33135, 0 4px 12px rgba(229,72,77,0.45); }
+  50%      { box-shadow: 0 3px 0 #B33135, 0 4px 20px rgba(229,72,77,0.7); }
+}
+
+/* Schema field editor rows */
+.schema-field-row {
+  display: grid;
+  grid-template-columns: 1fr 100px auto auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: var(--surface-alt, #FAFAF5);
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border, #E8E5D8);
+}
+.schema-field-row .schema-label-input,
+.schema-field-row .schema-type-input {
+  font-size: 0.9rem;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #E8E5D8);
+  background: white;
+  font-family: inherit;
+}
+.schema-field-row .schema-required {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.schema-field-row .schema-required-input {
+  margin: 0;
+}
+.schema-field-row .schema-remove-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.3rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+}
+.schema-field-row .schema-remove-btn:hover {
+  color: var(--danger, #E5484D);
+}
+@media (max-width: 480px) {
+  .schema-field-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+  }
+  .schema-field-row .schema-label-input { grid-column: 1 / -1; }
+  .schema-field-row .schema-type-input { grid-column: 1; }
+  .schema-field-row .schema-required { grid-column: 1 / 2; }
+  .schema-field-row .schema-remove-btn { grid-column: 2; grid-row: 2; align-self: center; }
+}
+
+/* Duration display in the log-details prompt */
+.log-duration-display {
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent, #5BA856);
+  padding: 12px 14px;
+  background: var(--surface-alt, #FAFAF5);
+  border-radius: var(--radius-md, 10px);
+  text-align: center;
+}
+
+/* Schema extras in recent activity rows */
+.history-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.history-item-time { color: var(--text-muted); font-size: 0.85rem; }
+.history-item-extras {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  padding-left: 4px;
+}
+.log-extra {
+  font-size: 0.75rem;
+  background: var(--surface-alt, #FAFAF5);
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #E8E5D8);
+  color: var(--text, #2A2D2A);
+}
+.log-extra.log-note-extra {
+  font-style: italic;
+  color: var(--text-muted);
+}

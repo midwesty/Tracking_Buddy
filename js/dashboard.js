@@ -237,6 +237,16 @@ TB.Dashboard = (function () {
           const r = TB.Metrics.compute(mid, tile, TB.Storage.getState());
           if (r.formatted !== vEl.textContent) vEl.textContent = r.formatted;
         });
+        // v0.004: tick the live timer elapsed display
+        const elapsedEl = tileEl.querySelector('.timer-elapsed[data-elapsed-start]');
+        if (elapsedEl) {
+          const startedAt = parseInt(elapsedEl.dataset.elapsedStart, 10);
+          if (!isNaN(startedAt)) {
+            const elapsed = Date.now() - startedAt;
+            const txt = TB.Metrics.formatDuration(elapsed);
+            if (txt !== elapsedEl.textContent) elapsedEl.textContent = txt;
+          }
+        }
       });
     }, 1000);
   }

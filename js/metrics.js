@@ -67,6 +67,28 @@ TB.Metrics = (function () {
     return Math.max(0, now - start - pauseDur);
   }
 
+  // v0.004: returns the timestamp of the most recent NON-LAPSE log entry.
+  // Falls back to tile.created if there are no logs.
+  function getLastLogTime(tile) {
+    if (!tile) return Date.now();
+    const logs = tile.logs || [];
+    for (let i = logs.length - 1; i >= 0; i--) {
+      if (logs[i].type !== 'lapse') return logs[i].time;
+    }
+    return tile.created || Date.now();
+  }
+
+  // v0.004: "time since last activity" — meaningfully different from streak duration
+  // for build/observe/neutral/earn tiles that get logged repeatedly.
+  function getTimeSinceLastActivity(tile) {
+    if (!tile) return 0;
+    // For quit tiles, "time since last" = time since last slip (or start of current attempt)
+    if (tile.type === 'quit') return getStreakDuration(tile);
+    // For all other tiles: time since most recent log
+    const last = getLastLogTime(tile);
+    return Math.max(0, Date.now() - last);
+  }
+
   function getEffectiveCostPerUnit(tile, atTime) {
     // Defer to storage's cost-history-aware helper
     if (TB.Storage && TB.Storage.getCostPerUnitAt) return TB.Storage.getCostPerUnitAt(tile, atTime);
@@ -207,8 +229,11 @@ TB.Metrics = (function () {
   // ========== Metric computers ==========
   const computers = {
     'time-since': function (tile) {
-      const dur = getStreakDuration(tile);
-      return { rawValue: dur, formatted: formatDuration(dur), isLive: !tile.paused };
+      // v0.004 fix: for non-quit tiles with logs, this is time since last log,
+      // not time since tile creation.
+      const dur = getTimeSinceLastActivity(tile);
+      const isLive = !tile.paused;
+      return { rawValue: dur, formatted: formatDuration(dur), isLive: isLive };
     },
     'current-streak': function (tile) {
       const dur = getStreakDuration(tile);
@@ -368,8 +393,99 @@ TB.Metrics = (function () {
       if (logs.length === 0) return { rawValue: 0, formatted: formatCurrency(0), isLive: false };
       const max = Math.max(...logs.map(l => Number(l.amount)));
       return { rawValue: max, formatted: formatCurrency(max), isLive: false };
+    },
+
+    // ---- v0.004: yearly earnings progress (powers the flag mascot for earn tiles) ----
+    'yearly-goal-progress': function (tile) {
+      const target = Number(tile.inputs && tile.inputs.yearlyTarget) || 0;
+      if (!target) return { rawValue: 0, formatted: '—', isLive: false };
+      const total = sumAmounts(tile);
+      const pct = target > 0 ? total / target : 0;
+      return { rawValue: pct, formatted: formatPercent(Math.min(pct, 9.99)), isLive: false };
+    },
+
+    // ---- v0.004: timer-related metrics ----
+    'total-time-logged': function (tile) {
+      const total = (tile.logs || []).reduce((s, l) => s + (l.durationMs || 0), 0);
+      return { rawValue: total, formatted: formatDuration(total, { compact: true }), isLive: false };
+    },
+    'avg-session-length': function (tile) {
+      const logs = (tile.logs || []).filter(l => l.durationMs);
+      if (logs.length === 0) return { rawValue: 0, formatted: '—', isLive: false };
+      const total = logs.reduce((s, l) => s + l.durationMs, 0);
+      return { rawValue: total / logs.length, formatted: formatDuration(total / logs.length, { compact: true }), isLive: false };
+    },
+    'longest-session': function (tile) {
+      const logs = (tile.logs || []).filter(l => l.durationMs);
+      if (logs.length === 0) return { rawValue: 0, formatted: '—', isLive: false };
+      const max = Math.max(...logs.map(l => l.durationMs));
+      return { rawValue: max, formatted: formatDuration(max, { compact: true }), isLive: false };
+    },
+    'time-today': function (tile) {
+      const total = (tile.logs || []).filter(l => l.time >= startOfDay() && l.durationMs).reduce((s, l) => s + l.durationMs, 0);
+      return { rawValue: total, formatted: formatDuration(total, { compact: true }), isLive: false };
+    },
+    'time-week': function (tile) {
+      const total = (tile.logs || []).filter(l => l.time >= startOfWeek() && l.durationMs).reduce((s, l) => s + l.durationMs, 0);
+      return { rawValue: total, formatted: formatDuration(total, { compact: true }), isLive: false };
+    },
+    'sessions-count': function (tile) {
+      const v = (tile.logs || []).filter(l => l.durationMs).length;
+      return { rawValue: v, formatted: formatCount(v), isLive: false };
     }
   };
+
+  // v0.004: pick a Tally expression based on the tile's current state.
+  // Used by tile face renderer to show a permanent reactive mascot.
+  // Priorities (top wins): paused > sleeping > slip-recently > goal-met > long-streak > fresh > default
+  function getTallyExpression(tile) {
+    if (!tile) return 'hero';
+    if (tile.paused) return 'think';
+
+    const now = Date.now();
+    const logs = tile.logs || [];
+
+    // Sleep: 30+ days since any activity (or creation if no logs)
+    if (!tile.system) {
+      const lastTime = logs.length > 0 ? logs[logs.length - 1].time : (tile.created || now);
+      if ((now - lastTime) > 30 * 86400000) return 'sleep';
+    }
+
+    // Recent slip on a quit tile (within last 24h) — comfort
+    if (tile.type === 'quit' && logs.length > 0) {
+      const recentLapse = logs.slice().reverse().find(l => l.type === 'lapse');
+      if (recentLapse && (now - recentLapse.time) < 86400000) return 'comfort';
+    }
+
+    // Any goal met? (daily, monthly, yearly, milestone counts)
+    // Daily goal hit today (build tiles)
+    if (tile.type === 'build' && tile.inputs && tile.inputs.dailyGoal) {
+      const todayCount = logs.filter(l => l.time >= startOfDay() && l.type !== 'lapse')
+        .reduce((s, l) => s + (l.count || 1), 0);
+      if (todayCount >= tile.inputs.dailyGoal) return 'flag';
+    }
+    // Yearly earnings goal hit (earn tiles)
+    if (tile.type === 'earn' && tile.inputs && tile.inputs.yearlyTarget) {
+      const totalEarned = logs.filter(l => l.type !== 'lapse' && l.amount != null)
+        .reduce((s, l) => s + Number(l.amount), 0);
+      if (totalEarned >= tile.inputs.yearlyTarget) return 'flag';
+    }
+
+    // Long quit streak — encourage (>14 days clean)
+    if (tile.type === 'quit') {
+      const streakDur = getStreakDuration(tile);
+      if (streakDur > 14 * 86400000) return 'encourage';
+    }
+
+    // Fresh tile with no logs yet — pointing
+    if (logs.length === 0 && !tile.system) {
+      const ageDays = (now - (tile.created || now)) / 86400000;
+      if (ageDays < 1) return 'point';
+    }
+
+    // Default
+    return 'hero';
+  }
 
   function computeSystemMetric(metricId, state) {
     const stats = state.stats || {};
@@ -429,6 +545,7 @@ TB.Metrics = (function () {
     compute,
     formatDuration, formatDays, formatCurrency, formatCount, formatDecimal, formatPercent,
     getStreakDuration, getEffectiveCostPerUnit,
+    getLastLogTime, getTimeSinceLastActivity, getTallyExpression,
     startOfDay, startOfWeek, startOfMonth, countLogs, sumAmounts,
     lifetimeDuration, lifetimeMoneySaved, lifetimeUnitsAvoided, lifetimeTimeReclaimed,
     bestAttemptDuration, avgAttemptDuration, totalAttempts
